@@ -56,6 +56,11 @@ begin
 end $$;
 grant execute on function public.zerar_demo() to anon, authenticated;
 
+-- Hora do servidor: cada aparelho mede a diferença do próprio relógio para o motoboy andar igual nas três telas.
+create or replace function public.agora() returns timestamptz
+language sql stable set search_path = '' as $$ select now() $$;
+grant execute on function public.agora() to anon, authenticated;
+
 -- Tempo real: o celular, o açougue e a TV recebem as mudanças na hora.
 do $$
 begin

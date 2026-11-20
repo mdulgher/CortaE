@@ -13,7 +13,8 @@ export function htmlTimeline(p) {
   return ETAPAS.map((st, i) => {
     const feito = i < idxAtual || p.status === 'entregue';
     const atual = i === idxAtual && p.status !== 'entregue';
-    const rotulo = st === 'recebido' ? 'Pedido recebido · pagamento aprovado' : STATUS[st].nome;
+    const recebido = p.pagamento === 'dinheiro' ? 'Pedido recebido · pagar na entrega' : 'Pedido recebido · pagamento aprovado';
+    const rotulo = st === 'recebido' ? recebido : STATUS[st].nome;
     return `<li class="${feito ? 'feito' : ''} ${atual ? 'atual' : ''}">
       <span class="bola">${STATUS[st].icone}</span><span class="rotulo">${rotulo}</span><span class="quando">${hora(quando(st))}</span></li>`;
   }).join('');

@@ -3,7 +3,7 @@ import { db } from './db.js';
 import { ACOUGUES, STATUS, acougue, plano, frequencia, DIAS_SEMANA } from './catalogo.js';
 import {
   esc, dinheiro, hora, tempoDesde, iniciarTema, toast, confirmar, vigiarErros,
-  liberarSom, somLiberado, tocarAviso,
+  liberarSom, somLiberado, tocarAviso, manterTelaAcesa,
 } from './ui.js';
 import { progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js';
 import { ic, pintarIcones } from './icones.js';
@@ -11,6 +11,7 @@ import { ic, pintarIcones } from './icones.js';
 vigiarErros();
 iniciarTema();
 pintarIcones();
+manterTelaAcesa();
 
 const $quadro = document.getElementById('quadro');
 const $assin = document.getElementById('assinaturas');
@@ -172,7 +173,12 @@ async function iniciar() {
   api = await db();
   await recarregar();
   render();
-  api.ouvir(async () => { await recarregar(); render(); });
+  api.ouvir(async (msg) => {
+    const antes = JSON.stringify([pedidos, assinaturas]);
+    await recarregar();
+    if (msg?.tipo === 'sync' && antes === JSON.stringify([pedidos, assinaturas])) return; // nada mudou
+    render();
+  });
   setInterval(atualizarEntregas, 500);
   setInterval(() => concluirEntregasVencidas(api, pedidos).catch(() => {}), 1000);
   setInterval(render, 15000); // "há N min"

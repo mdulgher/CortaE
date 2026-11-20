@@ -1,6 +1,7 @@
 // Implementação local: localStorage + BroadcastChannel.
 // Sincroniza só entre abas do MESMO navegador. Serve para ensaiar sem internet e sem Supabase.
 import { novoId } from './db.js';
+import { agoraISO } from './relogio.js';
 
 const CHAVES = { pedidos: 'cortae.pedidos', assinaturas: 'cortae.assinaturas' };
 
@@ -26,6 +27,9 @@ export function criar() {
       if (tabela) avisar({ tabela, tipo: 'sync' }, false);
     });
   }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') avisar({ tabela: '*', tipo: 'sync' }, false);
+  });
 
   return {
     fonte: 'local',
@@ -35,7 +39,7 @@ export function criar() {
 
     async criarPedido(dados) {
       const lista = ler('pedidos');
-      const em = new Date().toISOString();
+      const em = agoraISO();
       const p = {
         ...dados,
         id: novoId(),
@@ -59,7 +63,7 @@ export function criar() {
       if (!p) return null;
       if (deStatus && p.status !== deStatus) return p;
       if (p.status === novo) return p;
-      const em = new Date().toISOString();
+      const em = agoraISO();
       p.status = novo;
       p.historico = [...(p.historico || []), { status: novo, em }];
       if (novo === 'saiu') p.saiu_em = em;
@@ -73,7 +77,7 @@ export function criar() {
 
     async criarAssinatura(dados) {
       const lista = ler('assinaturas');
-      const a = { ...dados, id: novoId(), criado_em: new Date().toISOString(), status: 'ativa' };
+      const a = { ...dados, id: novoId(), criado_em: agoraISO(), status: 'ativa' };
       lista.push(a);
       gravar('assinaturas', lista);
       avisar({ tabela: 'assinaturas', tipo: 'insert', registro: a });
@@ -95,6 +99,9 @@ export function criar() {
       gravar('assinaturas', []);
       avisar({ tabela: '*', tipo: 'reset' });
     },
+
+    // Todas as abas usam o relógio deste mesmo computador: não há diferença a corrigir.
+    async diferencaRelogio() { return 0; },
 
     ouvir(fn) { ouvintes.add(fn); return () => ouvintes.delete(fn); },
   };

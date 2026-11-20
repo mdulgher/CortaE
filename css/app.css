@@ -15,7 +15,7 @@
   --bg: #fffbf9;
   --surface: #ffffff;
   --text: #2a1c1b;
-  --muted: #8b7571;
+  --muted: #735d59;   /* 5:1 sobre o papel: legível no sol e de longe */
   --linha: #f0e1da;
   --border: var(--linha);
 
@@ -24,6 +24,7 @@
   --verde: #2f8f5b;
   --verde-suave: #e3f3ea;
   --perigo: #c0392b;
+  --perigo-btn: #c0392b;
 
   --s-rec-bg: #fcefd2;  --s-rec: #7a5108;
   --s-prep-bg: #fbe6d6; --s-prep: #9a4a12;
@@ -50,7 +51,7 @@
     --vinho-suave: #3d1f1c; --mostarda-suave: #3a2e17; --mostarda-texto: #f5c25e;
     --papel: #33221f; --papel-2: #2a1d1b;
     --bg: #161010; --surface: #211817; --text: #f6ece9; --muted: #b8a29d; --linha: #3a2a27;
-    --pri: #a92a20; --acento: #f5c25e; --verde-suave: #1b3326; --perigo: #e0594b;
+    --pri: #a92a20; --acento: #f5c25e; --verde-suave: #1b3326; --perigo: #e0594b; --perigo-btn: #b93a2f;
     --s-rec-bg: #3a2e17;  --s-rec: #f5c25e;
     --s-prep-bg: #3b2618; --s-prep: #f3a46b;
     --s-saiu-bg: #1d2a40; --s-saiu: #9dbcf0;
@@ -69,7 +70,7 @@
   --vinho-suave: #3d1f1c; --mostarda-suave: #3a2e17; --mostarda-texto: #f5c25e;
   --papel: #33221f; --papel-2: #2a1d1b;
   --bg: #161010; --surface: #211817; --text: #f6ece9; --muted: #b8a29d; --linha: #3a2a27;
-  --pri: #a92a20; --acento: #f5c25e; --verde-suave: #1b3326; --perigo: #e0594b;
+  --pri: #a92a20; --acento: #f5c25e; --verde-suave: #1b3326; --perigo: #e0594b; --perigo-btn: #b93a2f;
   --s-rec-bg: #3a2e17;  --s-rec: #f5c25e;
   --s-prep-bg: #3b2618; --s-prep: #f3a46b;
   --s-saiu-bg: #1d2a40; --s-saiu: #9dbcf0;
@@ -87,6 +88,7 @@
 * { box-sizing: border-box; }
 img { max-width: 100%; }
 html, body { margin: 0; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   font-family: var(--f-corpo);
   font-size: 16px;
@@ -103,7 +105,8 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 600; line-he
 strong, b { font-weight: 650; }
 .oculto { display: none !important; }
 
-:focus-visible { outline: 2.5px solid var(--mostarda); outline-offset: 2px; border-radius: 12px; }
+:focus-visible { outline: 2.5px solid var(--acento); outline-offset: 2px; border-radius: 12px; }
+.topo :focus-visible, .slide :focus-visible { outline-color: var(--mostarda); }
 
 /* ---------- Ícones de traço ---------- */
 .ic { width: 1.25em; height: 1.25em; flex: none; display: block; }
@@ -122,8 +125,8 @@ strong, b { font-weight: 650; }
 .btn-ama { background: var(--mostarda); color: #3d2600; }
 .btn-ama:hover { filter: brightness(1.04); }
 .btn-sec { background: var(--papel); color: var(--text); }
-.btn-perigo { background: var(--perigo); color: #fff; }
-.btn-ok { background: var(--verde); color: #fff; }
+.btn-perigo { background: var(--perigo-btn); color: #fff; }
+.btn-ok { background: #25744a; color: #fff; }
 .btn-bloco { width: 100%; }
 .btn[disabled] { opacity: .5; cursor: not-allowed; }
 
@@ -156,10 +159,10 @@ strong, b { font-weight: 650; }
 .selo-saiu { background: var(--s-saiu-bg); color: var(--s-saiu); }
 .selo-entregue { background: var(--s-ok-bg); color: var(--s-ok); }
 .selo-recusado { background: var(--s-nao-bg); color: var(--s-nao); }
-.verificado { color: var(--verde); font-size: .85em; }
+.verificado { color: var(--s-ok); font-size: .85em; }
 
 /* ---------- Toast e modal ---------- */
-.toasts { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 9999;
+.toasts { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 9999;
   display: grid; gap: 8px; width: min(92vw, 440px); pointer-events: none; }
 .toast {
   background: var(--toast, #2a1c1b); color: #fff; padding: 12px 16px; border-radius: 16px; font-weight: 600; font-size: .95rem;
@@ -188,6 +191,9 @@ strong, b { font-weight: 650; }
 .pino-moto span { border-color: #f2b53a; background: #fff8e6; font-size: 23px; animation: pulsa 1.2s ease-in-out infinite; }
 @keyframes pulsa { 50% { transform: scale(1.1); } }
 .leaflet-container { font-family: inherit; background: var(--papel); }
+
+/* Nome ou endereço digitado sem espaço não pode empurrar a tela para o lado */
+.cartao, .ped, .dest-quem, .tabela td, .loja, .cli { overflow-wrap: anywhere; }
 
 /* ---------- Linha do tempo do pedido ---------- */
 .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }

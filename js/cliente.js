@@ -6,7 +6,7 @@ import {
   acougue, produto, plano, frequencia,
 } from './catalogo.js';
 import {
-  esc, dinheiro, hora, iniciarTema, atualizarBotoesTema, toast, confirmar, vigiarErros,
+  esc, dinheiro, hora, iniciarTema, atualizarBotoesTema, toast, confirmar, vigiarErros, manterTelaAcesa,
 } from './ui.js';
 import { htmlTimeline } from './timeline.js';
 import { MapaEntrega, segundosRestantes, progressoEntrega, concluirEntregasVencidas } from './entrega.js';
@@ -15,6 +15,8 @@ import { ic, pintarIcones } from './icones.js';
 vigiarErros();
 iniciarTema();
 pintarIcones();
+manterTelaAcesa();
+document.addEventListener('touchstart', () => {}, { passive: true }); // o Safari do iPhone só mostra o :active com isto
 
 const $topo = document.getElementById('topo');
 const $tela = document.getElementById('tela');
@@ -67,7 +69,11 @@ function render() {
   $topo.className = 'topo';
   $topo.innerHTML = out.topo;
   $tela.innerHTML = out.html;
-  $abas.querySelectorAll('.aba').forEach((a) => a.classList.toggle('ativa', a.dataset.aba === ABA_DE[r.nome]));
+  $abas.querySelectorAll('.aba').forEach((a) => {
+    const ativa = a.dataset.aba === ABA_DE[r.nome];
+    a.classList.toggle('ativa', ativa);
+    if (ativa) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
   atualizarBotoesTema();
   atualizarBadge();
   out.depois?.();
@@ -80,7 +86,7 @@ function topoGrande() {
   return `
     <div class="topo-linha">
       <div class="topo-acoes">
-        <a class="icone-btn" href="#/conta" aria-label="Menu">${ic('menu')}</a>
+        <a class="icone-btn" href="#/conta" aria-label="Minha conta">${ic('menu')}</a>
         <button class="icone-btn" data-tema-btn></button>
       </div>
       <img class="logo-img" src="img/logo.jpg" alt="CortaÊ — Escolha. Peça. Receba!">
@@ -225,6 +231,9 @@ function iniciarCarrossel() {
   if (!slides) return;
   const atual = () => Math.round(slides.scrollLeft / slides.clientWidth);
   slides.addEventListener('scroll', () => pontos.forEach((p, i) => p.classList.toggle('ativo', i === atual())), { passive: true });
+  // Não anda sozinho para quem pediu menos movimento, e para de vez quando a pessoa desliza com o dedo.
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  slides.addEventListener('pointerdown', () => clearInterval(slideTimer), { once: true });
   slideTimer = setInterval(() => {
     const prox = (atual() + 1) % pontos.length;
     slides.scrollTo({ left: prox * slides.clientWidth, behavior: 'smooth' });
@@ -573,7 +582,8 @@ async function finalizar(botao) {
   } catch (e) {
     tela.remove();
     botao.disabled = false;
-    toast(`Não deu para enviar o pedido: ${e.message}`, 'erro');
+    console.error(e);
+    toast('O pedido não foi enviado. Confira a internet e toque em "Fazer pedido" de novo.', 'erro');
     return;
   }
   tela.innerHTML = `<div class="certo">${ic('check')}</div><h2>${escolha.pagamento === 'dinheiro' ? 'Pedido enviado!' : 'Pagamento aprovado!'}</h2><p>Pedido #${pedido.numero} · ${esc(a.nome)}</p>`;
@@ -607,7 +617,8 @@ document.addEventListener('click', async (e) => {
     case 'add': return adicionar(id);
     case 'menos': return remover(id);
     case 'voltar': if (history.length > 1) history.back(); else location.hash = '#/'; return;
-    case 'ir-busca': location.hash = '#/busca'; return;
+    // pushState não dispara hashchange: a tela de busca é montada dentro do toque e o iPhone abre o teclado no foco.
+    case 'ir-busca': history.pushState(null, '', '#/busca'); render(); return;
     case 'pagamento':
       escolha.pagamento = id;
       document.querySelectorAll('.pagamento').forEach((b) => b.classList.toggle('ativo', b.dataset.id === id));
@@ -619,11 +630,16 @@ document.addEventListener('click', async (e) => {
     case 'assin-acougue': escolha.acougue = id; return render();
     case 'assinar': el.disabled = true; return assinar().catch((err) => { el.disabled = false; throw err; });
     case 'pausar': {
+      // A assinatura pode ter sumido (demo zerada em outro aparelho): só redesenha.
       const a = minhaAssinatura();
+      if (!a) { await recarregar(); return render(); }
+      el.disabled = true;
       const pausar = a.status === 'ativa';
-      await api.atualizarAssinatura(a.id, pausar
-        ? { status: 'pausada' }
-        : { status: 'ativa', proxima_entrega: proximaEntrega(a.dia_semana) });
+      try {
+        await api.atualizarAssinatura(a.id, pausar
+          ? { status: 'pausada' }
+          : { status: 'ativa', proxima_entrega: proximaEntrega(a.dia_semana) });
+      } finally { el.disabled = false; }
       await recarregar();
       toast(pausar ? 'Assinatura pausada' : 'Assinatura retomada', 'ok');
       return render();
@@ -631,7 +647,8 @@ document.addEventListener('click', async (e) => {
     case 'cancelar-assin': {
       const ok = await confirmar({ titulo: 'Cancelar a assinatura?', texto: 'Você pode assinar de novo quando quiser.', ok: 'Cancelar assinatura', cancelar: 'Manter', perigo: true });
       if (!ok) return;
-      await api.atualizarAssinatura(minhaAssinatura().id, { status: 'cancelada' });
+      const a = minhaAssinatura();
+      if (a) await api.atualizarAssinatura(a.id, { status: 'cancelada' });
       await recarregar();
       return render();
     }
@@ -673,8 +690,15 @@ function avisarMudancas() {
   }
 }
 
-async function aoMudar() {
+let assinaturaDados = '';
+async function aoMudar(msg) {
   await recarregar();
+  // A recarga de segurança (tela que volta a aparecer, a cada 20 s) só redesenha se algo mudou de fato,
+  // para não mexer na tela enquanto a pessoa escolhe um plano ou preenche um campo.
+  const agoraDados = JSON.stringify([pedidos, assinaturas]);
+  const igual = agoraDados === assinaturaDados;
+  assinaturaDados = agoraDados;
+  if (msg?.tipo === 'sync' && igual) return;
   avisarMudancas();
   const r = rota();
   if (r.nome === 'pedido') {
@@ -707,7 +731,7 @@ function boasVindas() {
       e.preventDefault();
       cliente = {
         id: novoId(),
-        nome: el.querySelector('#bv-nome').value.trim(),
+        nome: el.querySelector('#bv-nome').value.trim() || 'Cliente',
         endereco: el.querySelector('#bv-end').value.trim() || CLIENTE_PADRAO.endereco,
       };
       LS.set('cortae.cliente', cliente);
@@ -726,7 +750,8 @@ async function iniciar() {
   meusPedidos().forEach((p) => statusVistos.set(p.id, p.status));
   if (!cliente) await boasVindas();
   render();
-  api.ouvir(() => aoMudar().catch((e) => toast(e.message, 'erro')));
+  assinaturaDados = JSON.stringify([pedidos, assinaturas]);
+  api.ouvir((msg) => aoMudar(msg).catch((e) => toast(e.message, 'erro')));
   window.addEventListener('hashchange', render);
   setInterval(() => {
     const r = rota();

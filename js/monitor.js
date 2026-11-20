@@ -1,14 +1,16 @@
 // Monitor da TV: mostra ao vivo o pedido que está andando, o motoboy no mapa e os números do dia.
 import { db } from './db.js';
 import { STATUS, acougue, plano } from './catalogo.js';
-import { esc, dinheiro, hora, iniciarTema, vigiarErros, toast } from './ui.js';
+import { esc, dinheiro, hora, iniciarTema, vigiarErros, toast, manterTelaAcesa } from './ui.js';
 import { htmlTimeline } from './timeline.js';
 import { MapaEntrega, progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js';
 import { ic, pintarIcones } from './icones.js';
+import { agora } from './relogio.js';
 
 vigiarErros();
 iniciarTema();
 pintarIcones();
+manterTelaAcesa();
 
 const $kpis = document.getElementById('kpis');
 const $dest = document.getElementById('destaque');
@@ -43,7 +45,7 @@ function renderKpis() {
     k('Em preparo', pedidos.filter((p) => p.status === 'preparando').length, '', 'p-prep'),
     k('Em entrega', pedidos.filter((p) => p.status === 'saiu').length, '', 'p-saiu'),
     k('Entregues', doDia.filter((p) => p.status === 'entregue').length, '', 'p-ok'),
-    k('Vendas do dia', dinheiro(valor)),
+    k('Vendas do dia', dinheiro(valor), 'k-valor'),
     k('Assinaturas', assinaturas.filter((a) => a.status === 'ativa').length, '', 'p-assin'),
   ].join('');
 }
@@ -74,7 +76,7 @@ function renderDestaque() {
 }
 
 function renderUltimos() {
-  const ult = pedidos.slice(0, 8);
+  const ult = pedidos.slice(0, 6); // seis cartões inteiros cabem na faixa de baixo
   $ult.innerHTML = ult.length ? ult.map((p) => `
     <div class="ult cartao-tv">
       <strong>#${p.numero} · ${esc(p.cliente_nome)}</strong>
@@ -128,7 +130,7 @@ async function recarregar() {
 }
 
 function relogio() {
-  document.getElementById('relogio').textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  document.getElementById('relogio').textContent = new Date(agora()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 document.getElementById('btn-tela').addEventListener('click', () => {
@@ -143,7 +145,12 @@ async function iniciar() {
   api = await db();
   await recarregar();
   render();
-  api.ouvir(async () => { await recarregar(); render(); });
+  api.ouvir(async (msg) => {
+    const antes = JSON.stringify([pedidos, assinaturas]);
+    await recarregar();
+    if (msg?.tipo === 'sync' && antes === JSON.stringify([pedidos, assinaturas])) return; // nada mudou
+    render();
+  });
   setInterval(() => {
     const p = destaque();
     if (p?.status === 'saiu') {

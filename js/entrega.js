@@ -2,11 +2,12 @@
 // Qualquer tela aberta (cliente, açougue ou TV) marca "entregue" quando o tempo acaba.
 import { CONFIG } from './config.js';
 import { ACOUGUES, CLIENTE_PADRAO, acougue } from './catalogo.js';
+import { agora } from './relogio.js';
 
 export function progressoEntrega(p) {
   if (p.status === 'entregue') return 1;
   if (p.status !== 'saiu' || !p.saiu_em) return 0;
-  const s = (Date.now() - new Date(p.saiu_em).getTime()) / 1000;
+  const s = (agora() - new Date(p.saiu_em).getTime()) / 1000;
   return Math.min(1, Math.max(0, s / CONFIG.ENTREGA_SEGUNDOS));
 }
 
@@ -51,7 +52,8 @@ const icone = (emoji, classe = '') => L.divIcon({
 
 export class MapaEntrega {
   constructor(el, { todosAcougues = false, zoomControl = true } = {}) {
-    this.mapa = L.map(el, { zoomControl, attributionControl: true, scrollWheelZoom: false });
+    // No celular o mapa não arrasta com um dedo: assim o dedo rola a página até a linha do tempo (a pinça ainda dá zoom).
+    this.mapa = L.map(el, { zoomControl, attributionControl: true, scrollWheelZoom: false, dragging: !L.Browser.mobile });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap',
@@ -60,13 +62,15 @@ export class MapaEntrega {
     this.lojas = {};
     if (todosAcougues) {
       ACOUGUES.forEach((a) => {
-        this.lojas[a.id] = L.marker(a.pos, { icon: icone(a.icone, 'pino-loja') }).addTo(this.mapa).bindTooltip(a.nome);
+        this.lojas[a.id] = L.marker(a.pos, { icon: icone(a.icone, 'pino-loja') }).addTo(this.mapa)
+          .bindTooltip(a.nome, { permanent: true, direction: 'top', offset: [0, -30] }); // na TV ninguém passa o mouse
       });
     }
     this.linha = null;
     this.moto = null;
     this.pedidoId = null;
-    this.enquadrar(ACOUGUES.map((a) => a.pos).concat([CLIENTE_PADRAO.pos]));
+    this.pontosIniciais = ACOUGUES.map((a) => a.pos).concat([CLIENTE_PADRAO.pos]);
+    this.enquadrar(this.pontosIniciais);
   }
 
   enquadrar(pontos) {
@@ -105,5 +109,9 @@ export class MapaEntrega {
     this.moto = null;
   }
 
-  ajustar() { this.mapa.invalidateSize(); }
+  // Depois de mudar o tamanho (tela cheia na TV), reenquadra a rota em vez de só redesenhar.
+  ajustar() {
+    this.mapa.invalidateSize();
+    this.enquadrar(this.linha ? this.linha.getLatLngs() : this.pontosIniciais);
+  }
 }

@@ -7,16 +7,25 @@
 //               acougue_id, status ('ativa'|'pausada'|'cancelada'), proxima_entrega }
 //
 // Interface: listarPedidos, obterPedido, criarPedido, mudarStatus(id, novo, deStatus?),
-//            listarAssinaturas, criarAssinatura, atualizarAssinatura(id, campos), zerar, ouvir(fn)
+//            listarAssinaturas, criarAssinatura, atualizarAssinatura(id, campos), zerar, ouvir(fn),
+//            diferencaRelogio() (ms entre a hora do servidor e a deste aparelho; 0 no modo local)
+// ouvir(fn) também é chamado com { tipo: 'sync' } quando a tela volta a ficar visível ou a rede volta,
+// para a tela recarregar o que pode ter perdido enquanto o aparelho dormia.
 import { CONFIG, DATA_SOURCE } from './config.js';
+import { ajustarRelogio } from './relogio.js';
 
 let promessa;
 
 export function db() {
   if (!promessa) {
-    promessa = DATA_SOURCE === 'supabase'
+    promessa = (DATA_SOURCE === 'supabase'
       ? import('./db-supabase.js').then((m) => m.criar(CONFIG))
-      : import('./db-local.js').then((m) => m.criar());
+      : import('./db-local.js').then((m) => m.criar()))
+      .then((api) => {
+        // Acerta o relógio em paralelo, sem atrasar a primeira tela; sem resposta, vale a hora do aparelho.
+        api.diferencaRelogio().then(ajustarRelogio).catch(() => {});
+        return api;
+      });
   }
   return promessa;
 }

@@ -2,6 +2,8 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
+  <!-- Aplica o tema salvo antes de desenhar, para a tela não piscar no tema do sistema -->
+  <script>try { var t = localStorage.getItem('cortae.tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
   <title>CortaÊ Parceiros</title>
@@ -36,7 +38,7 @@
     </div>
   </nav>
   <main id="quadro" class="quadro"></main>
-  <main id="assinaturas" class="assin-lista oculto"></main>
+  <section id="assinaturas" class="assin-lista oculto"></section>
   <script type="module" src="js/acougue.js"></script>
 </body>
 </html>

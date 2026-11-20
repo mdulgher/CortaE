@@ -1,5 +1,6 @@
 // Utilitários de tela compartilhados pelas três páginas.
 import { ic } from './icones.js';
+import { agora } from './relogio.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -11,7 +12,7 @@ export const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('pt-BR', { 
 export const dataCurta = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '');
 
 export function tempoDesde(iso) {
-  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  const s = Math.max(0, Math.round((agora() - new Date(iso).getTime()) / 1000));
   if (s < 60) return `há ${s}s`;
   const m = Math.round(s / 60);
   if (m < 60) return `há ${m} min`;
@@ -58,6 +59,7 @@ export function toast(texto, tipo = '') {
     caixa.className = 'toasts';
     document.body.appendChild(caixa);
   }
+  if (!caixa.hasAttribute('role')) { caixa.setAttribute('role', 'status'); caixa.setAttribute('aria-live', 'polite'); }
   const t = document.createElement('div');
   t.className = `toast ${tipo}`;
   t.textContent = texto;
@@ -72,15 +74,23 @@ export function confirmar({ titulo, texto = '', ok = 'Confirmar', cancelar = 'Ca
     const fundo = document.createElement('div');
     fundo.className = 'modal-fundo';
     fundo.innerHTML = `
-      <div class="modal" role="dialog" aria-modal="true">
-        <h3>${esc(titulo)}</h3>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+        <h3 id="modal-titulo">${esc(titulo)}</h3>
         ${texto ? `<p>${esc(texto)}</p>` : ''}
         <div class="modal-acoes">
           <button class="btn btn-sec" data-r="0">${esc(cancelar)}</button>
           <button class="btn ${perigo ? 'btn-perigo' : 'btn-pri'}" data-r="1">${esc(ok)}</button>
         </div>
       </div>`;
-    const fechar = (r) => { fundo.remove(); resolve(r); };
+    const antes = document.activeElement;
+    const tecla = (e) => { if (e.key === 'Escape') fechar(false); };
+    const fechar = (r) => {
+      fundo.remove();
+      document.removeEventListener('keydown', tecla);
+      antes?.focus?.({ preventScroll: true });
+      resolve(r);
+    };
+    document.addEventListener('keydown', tecla);
     fundo.addEventListener('click', (e) => {
       if (e.target === fundo) return fechar(false);
       const b = e.target.closest('[data-r]');
@@ -89,6 +99,18 @@ export function confirmar({ titulo, texto = '', ok = 'Confirmar', cancelar = 'Ca
     document.body.appendChild(fundo);
     fundo.querySelector('[data-r="1"]').focus();
   });
+}
+
+// ---------- Tela acesa (TV, painel e celular não apagam no meio da apresentação) ----------
+// O navegador só concede depois de um toque; ao voltar para a aba, a trava cai e é pedida de novo.
+let trava = null;
+async function pedirTrava() {
+  if (!('wakeLock' in navigator) || document.visibilityState !== 'visible' || (trava && !trava.released)) return;
+  try { trava = await navigator.wakeLock.request('screen'); } catch { trava = null; }
+}
+export function manterTelaAcesa() {
+  ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, pedirTrava, { passive: true }));
+  document.addEventListener('visibilitychange', pedirTrava);
 }
 
 // ---------- Som de aviso (WebAudio; precisa de um toque do usuário para liberar) ----------
