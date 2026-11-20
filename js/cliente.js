@@ -661,7 +661,7 @@ function avisarMudancas() {
     if (antes && antes !== p.status) {
       const s = STATUS[p.status];
       toast(`${s.icone} Pedido #${p.numero}: ${s.nome}`, p.status === 'recusado' ? 'erro' : 'ok');
-      navigator.vibrate?.(180);
+      if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(180);
     }
     statusVistos.set(p.id, p.status);
   }
