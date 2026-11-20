@@ -84,7 +84,7 @@ export class MapaEntrega {
       this.limparRota();
       this.pedidoId = p.id;
       if (!this.lojas[a.id]) this.lojas[a.id] = L.marker(a.pos, { icon: icone(a.icone, 'pino-loja') }).addTo(this.mapa);
-      this.linha = L.polyline(a.rota, { color: '#c8102e', weight: 6, opacity: 0.75, dashArray: '10 10' }).addTo(this.mapa);
+      this.linha = L.polyline(a.rota, { color: '#8a1414', weight: 5, opacity: 0.7, dashArray: '2 10', lineCap: 'round' }).addTo(this.mapa);
       this.enquadrar(a.rota);
     }
     const t = progressoEntrega(p);

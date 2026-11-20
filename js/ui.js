@@ -1,4 +1,5 @@
 // Utilitários de tela compartilhados pelas três páginas.
+import { ic } from './icones.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -40,7 +41,7 @@ export function alternarTema() {
 export function atualizarBotoesTema() {
   document.querySelectorAll('[data-tema-btn]').forEach((b) => {
     const escuro = temaAtual() === 'dark';
-    b.textContent = escuro ? '☀️' : '🌙';
+    b.innerHTML = ic(escuro ? 'sol' : 'lua');
     b.title = escuro ? 'Mudar para tema claro' : 'Mudar para tema escuro';
     b.setAttribute('aria-label', b.title);
   });

@@ -6,9 +6,11 @@ import {
   liberarSom, somLiberado, tocarAviso,
 } from './ui.js';
 import { progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js';
+import { ic, pintarIcones } from './icones.js';
 
 vigiarErros();
 iniciarTema();
+pintarIcones();
 
 const $quadro = document.getElementById('quadro');
 const $assin = document.getElementById('assinaturas');
@@ -39,22 +41,22 @@ function cartao(p) {
   if (p.status === 'recebido') {
     acoes = `<div class="acoes">
       <button class="btn btn-sec" data-acao="recusar" data-id="${p.id}">Recusar</button>
-      <button class="btn btn-ok" data-acao="aceitar" data-id="${p.id}">✔ Aceitar</button></div>`;
+      <button class="btn btn-ok" data-acao="aceitar" data-id="${p.id}">${ic('check')} Aceitar</button></div>`;
   } else if (p.status === 'preparando') {
-    acoes = `<div class="acoes"><button class="btn btn-pri" data-acao="despachar" data-id="${p.id}">🛵 Saiu para entrega</button></div>`;
+    acoes = `<div class="acoes"><button class="btn btn-pri" data-acao="despachar" data-id="${p.id}">${ic('moto')} Saiu para entrega</button></div>`;
   } else if (p.status === 'saiu') {
-    acoes = `<div class="chega"><span>🛵 A caminho</span><span data-seg="${p.id}">${segundosRestantes(p)}s</span></div>
+    acoes = `<div class="chega"><span>${ic('moto', 'ic-mini')} A caminho</span><span data-seg="${p.id}">${segundosRestantes(p)}s</span></div>
       <div class="barra"><i data-barra="${p.id}" style="width:${Math.round(progressoEntrega(p) * 100)}%"></i></div>`;
   } else if (p.status === 'entregue') {
-    acoes = `<div class="chega"><span>✅ Entregue</span><span>${hora(p.entregue_em)}</span></div>`;
+    acoes = `<div class="chega ok"><span>${ic('check', 'ic-mini')} Entregue</span><span>${hora(p.entregue_em)}</span></div>`;
   } else if (p.status === 'recusado') {
-    acoes = '<div class="chega"><span>✖️ Recusado</span></div>';
+    acoes = '<div class="chega nao"><span>Recusado</span></div>';
   }
   return `
     <article class="ped ${novos.has(p.id) ? 'novo' : ''}">
       <div class="ped-cab"><strong>#${p.numero}</strong><small>${hora(p.criado_em)} · ${tempoDesde(p.criado_em)}</small></div>
       ${$filtro.value === 'todos' ? `<span class="loja-tag">${a.icone} ${esc(a.nome)}</span>` : ''}
-      <div class="cli">👤 ${esc(p.cliente_nome)}<small>📍 ${esc(p.endereco)}</small></div>
+      <div class="cli">${esc(p.cliente_nome)}<small>${ic('pino', 'ic-mini')} ${esc(p.endereco)}</small></div>
       <ul>${p.itens.map((i) => `<li>${i.qtd}× ${esc(i.nome)}</li>`).join('')}</ul>
       <div class="tot"><span>${dinheiro(p.total)}</span><small>${pagNome[p.pagamento] || ''}</small></div>
       ${acoes}
@@ -64,14 +66,14 @@ function cartao(p) {
 function render() {
   const lista = doFiltro(pedidos);
   const colunas = [
-    { id: 'recebido', nome: '🧾 Novos', itens: lista.filter((p) => p.status === 'recebido') },
-    { id: 'preparando', nome: '🔪 Em preparo', itens: lista.filter((p) => p.status === 'preparando') },
-    { id: 'saiu', nome: '🛵 Em entrega', itens: lista.filter((p) => p.status === 'saiu') },
-    { id: 'entregue', nome: '✅ Concluídos', itens: lista.filter((p) => p.status === 'entregue' || p.status === 'recusado').slice(0, 8) },
+    { id: 'recebido', nome: 'Novos', itens: lista.filter((p) => p.status === 'recebido') },
+    { id: 'preparando', nome: 'Em preparo', itens: lista.filter((p) => p.status === 'preparando') },
+    { id: 'saiu', nome: 'Em entrega', itens: lista.filter((p) => p.status === 'saiu') },
+    { id: 'entregue', nome: 'Concluídos', itens: lista.filter((p) => p.status === 'entregue' || p.status === 'recusado').slice(0, 8) },
   ];
   $quadro.innerHTML = colunas.map((c) => `
     <section class="coluna" data-col="${c.id}">
-      <h2><span>${c.nome}</span><span class="selo">${c.itens.length}</span></h2>
+      <h2><span class="col-nome"><i></i>${c.nome}</span><span class="selo">${c.itens.length}</span></h2>
       ${c.itens.length ? c.itens.map(cartao).join('') : '<div class="vazio-col">Nada por aqui</div>'}
     </section>`).join('');
   const nNovos = lista.filter((p) => p.status === 'recebido').length;
@@ -85,7 +87,7 @@ function render() {
       <thead><tr><th>Cliente</th><th>Plano</th><th>Frequência</th><th>Próxima entrega</th><th>Açougue</th><th>Status</th></tr></thead>
       <tbody>${ativas.map((s) => `
         <tr>
-          <td>👤 ${esc(s.cliente_nome)}<br><small style="color:var(--muted)">${esc(s.endereco)}</small></td>
+          <td>${esc(s.cliente_nome)}<br><small>${esc(s.endereco)}</small></td>
           <td>${plano(s.plano_id)?.icone} ${esc(plano(s.plano_id)?.nome)} · ${dinheiro(plano(s.plano_id)?.preco)}</td>
           <td>${esc(frequencia(s.frequencia)?.nome)} · ${DIAS_SEMANA[s.dia_semana]}</td>
           <td>${s.status === 'pausada' ? '—' : (s.proxima_entrega || '').split('-').reverse().join('/')}</td>
@@ -154,7 +156,7 @@ $som.addEventListener('click', () => {
   liberarSom();
   setTimeout(() => {
     $som.classList.toggle('ligado', somLiberado());
-    $som.textContent = somLiberado() ? '🔔 Som ligado' : '🔔 Ativar som';
+    $som.innerHTML = `${ic('sino')} ${somLiberado() ? 'Som ligado' : 'Ativar som'}`;
     tocarAviso();
   }, 50);
 });

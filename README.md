@@ -9,7 +9,7 @@ Não é um produto: serve para a apresentação e depois será descartada.
 |---|---|---|
 | App do cliente | `index.html` | Safari do celular |
 | Painel do açougue | `acougue.html` | notebook ou tablet de quem faz o açougue |
-| Monitor ao vivo | `monitor.html` | TV (notebook ligado por HDMI), em tela cheia (botão ⛶) |
+| Monitor ao vivo | `monitor.html` | TV (notebook ligado por HDMI), em tela cheia (botão de tela cheia, no canto de cima) |
 
 O fluxo da demo: o cliente escolhe o açougue e os produtos, paga (simulado: Pix, cartão ou dinheiro) e acompanha o pedido.
 O açougue recebe o pedido com aviso sonoro, aceita e marca "saiu para entrega"; daí o motoboy anda sozinho no mapa
@@ -19,6 +19,8 @@ e dia, sem cobrança).
 ## Como funciona por dentro
 
 - HTML, CSS e JavaScript puros, **sem instalação e sem build**. Mapa: Leaflet + OpenStreetMap.
+- Visual: vinho e mostarda do logo como acento, fundo claro com tom de papel de açougue; fontes Baloo 2 (títulos) e
+  Figtree (texto); ícones de traço desenhados em `js/icones.js`. Cores e tema claro/escuro em `css/app.css`.
 - `js/db.js` é a fachada de dados; as telas só falam com ela. Duas implementações com a mesma interface:
   - **local** (`js/db-local.js`): guarda no navegador e sincroniza só entre abas do **mesmo** navegador. Serve para ensaiar.
   - **Supabase** (`js/db-supabase.js`): tempo real entre aparelhos. É o que a apresentação usa (celular + açougue + TV).
@@ -48,9 +50,9 @@ Abra `http://localhost:5173`, `http://localhost:5173/acougue.html` e `http://loc
 ## Antes de apresentar
 
 - O Supabase Free **pausa o projeto depois de ~7 dias sem uso**. Abrir o app na véspera e no dia.
-- Zerar a demonstração (🧹 no painel do açougue, ou Minha Conta → Zerar) para os pedidos começarem do #1.
-- No painel do açougue, tocar em **🔔 Ativar som** (o navegador só toca som depois de um toque).
-- Na TV, abrir o monitor e tocar em ⛶ para tela cheia.
+- Zerar a demonstração (botão de seta circular no painel do açougue, ou Minha Conta → Zerar demonstração) para os pedidos começarem do #1.
+- No painel do açougue, tocar em **Ativar som** (o navegador só toca som depois de um toque).
+- Na TV, abrir o monitor e tocar no botão de tela cheia.
 - Testar a internet do local: as três telas precisam dela (Supabase e mapa).
 - **Depois de publicar uma mudança**, o navegador pode guardar a versão antiga por até **10 minutos** (cache do GitHub Pages).
   Não publicar nada na última hora antes da apresentação; se publicar, esperar 10 minutos e recarregar as três telas.

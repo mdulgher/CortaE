@@ -10,9 +10,11 @@ import {
 } from './ui.js';
 import { htmlTimeline } from './timeline.js';
 import { MapaEntrega, segundosRestantes, progressoEntrega, concluirEntregasVencidas } from './entrega.js';
+import { ic, pintarIcones } from './icones.js';
 
 vigiarErros();
 iniciarTema();
+pintarIcones();
 
 const $topo = document.getElementById('topo');
 const $tela = document.getElementById('tela');
@@ -72,29 +74,29 @@ function render() {
 }
 
 // ---------- Topo ----------
-const botaoCarrinho = '<a class="icone-btn" href="#/carrinho" aria-label="Carrinho">🛒<span class="badge oculto" data-badge></span></a>';
+const botaoCarrinho = `<a class="icone-btn" href="#/carrinho" aria-label="Carrinho">${ic('carrinho')}<span class="badge oculto" data-badge></span></a>`;
 
 function topoGrande() {
   return `
     <div class="topo-linha">
       <div class="topo-acoes">
-        <a class="icone-btn" href="#/conta" aria-label="Menu">☰</a>
+        <a class="icone-btn" href="#/conta" aria-label="Menu">${ic('menu')}</a>
         <button class="icone-btn" data-tema-btn></button>
       </div>
       <img class="logo-img" src="img/logo.jpg" alt="CortaÊ — Escolha. Peça. Receba!">
       <div class="topo-acoes">
-        <a class="icone-btn" href="#/pedidos" aria-label="Meus pedidos">🔔</a>
+        <a class="icone-btn" href="#/pedidos" aria-label="Meus pedidos">${ic('sino')}</a>
         ${botaoCarrinho}
       </div>
     </div>
-    <div class="local">📍 Entregar em: <b>Santos - SP</b></div>
-    <button class="busca" data-acao="ir-busca">🔍 <span>O que você procura?</span></button>`;
+    <div class="local">${ic('pino')} Entregar em <b>Santos - SP</b></div>
+    <button class="busca" data-acao="ir-busca">${ic('busca')} <span>O que você procura?</span></button>`;
 }
 
 function topoMini(titulo) {
   return `
     <div class="topo-mini">
-      <button class="icone-btn" data-acao="voltar" aria-label="Voltar">←</button>
+      <button class="icone-btn" data-acao="voltar" aria-label="Voltar">${ic('voltar')}</button>
       <h1>${esc(titulo)}</h1>
       <button class="icone-btn" data-tema-btn></button>
       ${botaoCarrinho}
@@ -112,10 +114,10 @@ function atualizarBadge() {
 // ---------- Pedaços reutilizados ----------
 function controle(id) {
   const q = carrinho.itens[id] || 0;
-  if (!q) return `<button class="add" data-acao="add" data-id="${id}" aria-label="Adicionar">+</button>`;
+  if (!q) return `<button class="add" data-acao="add" data-id="${id}" aria-label="Adicionar">${ic('mais')}</button>`;
   return `<div class="qtd">
-    <button data-acao="menos" data-id="${id}" aria-label="Diminuir">−</button><span>${q}</span>
-    <button data-acao="add" data-id="${id}" aria-label="Aumentar">+</button></div>`;
+    <button data-acao="menos" data-id="${id}" aria-label="Diminuir">${ic('menos')}</button><span>${q}</span>
+    <button data-acao="add" data-id="${id}" aria-label="Aumentar">${ic('mais')}</button></div>`;
 }
 
 function cartaoProduto(p, mostrarLoja = false) {
@@ -139,9 +141,13 @@ function cartaoLoja(a) {
       <div>
         <strong>${esc(a.nome)} <span class="verificado" title="Parceiro verificado">✔︎</span></strong>
         <small>${esc(a.desc)}</small>
-        <div class="meta"><span class="estrela">★ ${a.nota.toFixed(1)}</span><span>⏱ ${a.tempo}</span><span>🛵 ${dinheiro(a.taxa)}</span></div>
+        ${meta(a)}
       </div>
     </a>`;
+}
+
+function meta(a, prefixoTaxa = '') {
+  return `<div class="meta"><span class="estrela">★ ${a.nota.toFixed(1)}</span><span>${ic('relogio', 'ic-mini')} ${a.tempo}</span><span>${ic('moto', 'ic-mini')} ${prefixoTaxa}${dinheiro(a.taxa)}</span></div>`;
 }
 
 function cartaoPedidoAtivo(p) {
@@ -150,7 +156,7 @@ function cartaoPedidoAtivo(p) {
     <a class="pedido-ativo" href="#/pedido/${p.id}">
       <span class="ico">${s.icone}</span>
       <span>Pedido #${p.numero} · ${esc(s.nome)}<small>${esc(acougue(p.acougue_id)?.nome || '')} · toque para acompanhar</small></span>
-      <span>→</span>
+      ${ic('seta')}
     </a>`;
 }
 
@@ -163,29 +169,29 @@ function inicio() {
     html: `
       <div id="slot-ativo">${ativo ? cartaoPedidoAtivo(ativo) : ''}</div>
       <div class="atalhos">
-        <a class="atalho atalho-1" href="#/acougues"><span class="ico">🥩</span>Açougues</a>
-        <a class="atalho atalho-2" href="#/categoria/kits"><span class="ico">📦</span>Kits</a>
-        <a class="atalho atalho-3" href="#/assinatura"><span class="ico">🔄</span>Assinatura</a>
-        <a class="atalho atalho-4" href="#/categoria/outros"><span class="ico">🧺</span>Outros Produtos</a>
+        <a class="atalho atalho-1" href="#/acougues"><span class="ico">${ic('carne')}</span>Açougues</a>
+        <a class="atalho atalho-2" href="#/categoria/kits"><span class="ico">${ic('caixa')}</span>Kits</a>
+        <a class="atalho atalho-3" href="#/assinatura"><span class="ico">${ic('ciclo')}</span>Assinatura</a>
+        <a class="atalho atalho-4" href="#/categoria/outros"><span class="ico">${ic('cesta')}</span>Outros Produtos</a>
       </div>
       <div class="carrossel">
         <div class="slides" id="slides">
           <div class="slide">
             <h3>Kits <b>Especiais</b></h3>
             <p>Praticidade e qualidade na sua mesa!</p>
-            <a class="btn btn-ama" href="#/categoria/kits">Ver Kits →</a>
+            <a class="btn btn-ama" href="#/categoria/kits">Ver kits</a>
             <img src="img/banner-carne.jpg" alt="">
           </div>
           <div class="slide slide-2">
-            <h3>Carne fresca <b style="color:#5e0707">toda semana</b></h3>
+            <h3>Carne fresca <b>toda semana</b></h3>
             <p>Assine e receba sem precisar lembrar.</p>
-            <a class="btn btn-pri" href="#/assinatura">Assinar →</a>
-            <span class="arte">🔄</span>
+            <a class="btn btn-pri" href="#/assinatura">Assinar</a>
+            <span class="arte">${ic('ciclo')}</span>
           </div>
           <div class="slide slide-3">
             <h3>Churrasco <b>de sábado</b></h3>
             <p>Picanha, linguiça e carvão em um só pedido.</p>
-            <a class="btn btn-ama" href="#/categoria/bovinos">Ver cortes →</a>
+            <a class="btn btn-pri" href="#/categoria/bovinos">Ver cortes</a>
             <span class="arte">🔥</span>
           </div>
         </div>
@@ -241,8 +247,8 @@ function telaAcougue(r) {
       <div class="loja-capa">
         <span class="ico">${a.icone}</span>
         <h2>${esc(a.nome)} <span class="verificado">✔︎</span></h2>
-        <small style="color:var(--muted);font-weight:700">${esc(a.endereco)} · Parceiro verificado (alvará e inspeção sanitária)</small>
-        <div class="meta"><span class="estrela">★ ${a.nota.toFixed(1)}</span><span>⏱ ${a.tempo}</span><span>🛵 Entrega ${dinheiro(a.taxa)}</span></div>
+        <small>${esc(a.endereco)} · Parceiro verificado (alvará e inspeção sanitária)</small>
+        ${meta(a, 'Entrega ')}
       </div>
       <div class="chips chips-rolar">${chip('todos', 'Todos')}${CATEGORIAS.map((c) => chip(c.id, `${c.icone} ${c.nome}`)).join('')}</div>
       <div class="lista">${prods.map((p) => cartaoProduto(p)).join('')}</div>`,
@@ -279,7 +285,7 @@ function busca(r) {
   return {
     topo: topoMini('Buscar'),
     html: `
-      <label class="busca" style="box-shadow:var(--sombra)">🔍 <input id="q" placeholder="O que você procura?" value="${esc(q)}" autocomplete="off"></label>
+      <label class="busca">${ic('busca')} <input id="q" placeholder="O que você procura?" value="${esc(q)}" autocomplete="off"></label>
       <div id="resultados">${resultadosBusca(q)}</div>`,
     depois() {
       const input = document.getElementById('q');
@@ -314,10 +320,10 @@ function telaCarrinho() {
             <div data-ctl="${p.id}">${controle(p.id)}</div>
           </div>`).join('')}
       </div>
-      <div class="cartao"><label class="campo">📍 Entregar em
+      <div class="cartao"><label class="campo">Entregar em
         <input id="endereco" value="${esc(cliente?.endereco || CLIENTE_PADRAO.endereco)}"></label></div>
       <div class="cartao" style="display:grid;gap:10px">
-        <h2 style="font-size:1.05rem;font-weight:900">Pagamento</h2>
+        <h2 class="subtitulo">Pagamento</h2>
         <div class="pagamentos">
           ${pag('pix', '⚡', 'Pix', 'Aprovação na hora')}
           ${pag('cartao', '💳', 'Cartão de crédito', 'Final 4242')}
@@ -425,16 +431,16 @@ function telaAssinatura() {
       topo: topoMini('Assinatura'),
       html: `
         <div class="assin-ativa">
-          <span style="font-size:2.4rem">${pl.icone}</span>
+          <span class="ico">${pl.icone}</span>
           <h2>Plano ${esc(pl.nome)}</h2>
-          <span class="selo" style="justify-self:start;background:${pausada ? '#fff3cd' : '#d1fae5'};color:${pausada ? '#7a5200' : '#065f46'}">${pausada ? '⏸ Pausada' : '✅ Ativa'}</span>
+          <span class="selo ${pausada ? 'selo-recebido' : 'selo-entregue'}" style="justify-self:start">${pausada ? 'Pausada' : `${ic('check', 'ic-mini')} Ativa`}</span>
           <div class="linha"><span>O que vem</span><span>${esc(pl.desc)}</span></div>
           <div class="linha"><span>Frequência</span><span>${esc(frequencia(ativa.frequencia).nome)} · ${DIAS_SEMANA[ativa.dia_semana]}</span></div>
           <div class="linha"><span>Açougue</span><span>${esc(a.nome)}</span></div>
           <div class="linha"><span>Próxima entrega</span><span>${pausada ? '—' : dataBR(ativa.proxima_entrega)}</span></div>
           <div class="linha"><span>Valor por entrega</span><span>${dinheiro(pl.preco)}</span></div>
         </div>
-        <button class="btn btn-ama btn-bloco" data-acao="pausar">${pausada ? '▶️ Retomar assinatura' : '⏸ Pausar assinatura'}</button>
+        <button class="btn btn-ama btn-bloco" data-acao="pausar">${pausada ? 'Retomar assinatura' : 'Pausar assinatura'}</button>
         <button class="btn btn-sec btn-bloco" data-acao="cancelar-assin">Cancelar assinatura</button>
         <p class="aviso-demo">Demonstração: a assinatura não gera cobrança.</p>`,
     };
@@ -444,22 +450,22 @@ function telaAssinatura() {
   return {
     topo: topoMini('Assinatura'),
     html: `
-      <div class="cartao" style="display:grid;gap:6px">
-        <h2 style="font-size:1.25rem;font-weight:900">🔄 Carne fresca sem precisar lembrar</h2>
-        <p style="margin:0;color:var(--muted);font-weight:600">Escolha o plano, a frequência e o dia. O açougue separa e entrega sozinho.</p>
+      <div class="intro-assin">
+        <h2>Carne fresca sem precisar lembrar</h2>
+        <p>Escolha o plano, a frequência e o dia. O açougue separa e entrega sozinho.</p>
       </div>
-      <section style="display:grid;gap:10px"><h2 style="font-size:1.05rem;font-weight:900">1. Plano</h2>
+      <section><h2 class="passo"><i>1</i>Plano</h2>
         <div class="planos">${PLANOS.map((p) => `
           <button class="plano ${escolha.plano === p.id ? 'ativo' : ''}" data-acao="plano" data-id="${p.id}">
             ${p.destaque ? '<span class="fita">MAIS ESCOLHIDO</span>' : ''}
             <span class="ico">${p.icone}</span><span><strong>${esc(p.nome)}</strong><small>${esc(p.desc)}</small></span>
             <span class="preco">${dinheiro(p.preco)}<small><br>por entrega</small></span></button>`).join('')}
         </div></section>
-      <section style="display:grid;gap:10px"><h2 style="font-size:1.05rem;font-weight:900">2. Frequência</h2>
+      <section><h2 class="passo"><i>2</i>Frequência</h2>
         <div class="chips">${FREQUENCIAS.map((f) => `<button class="chip ${escolha.freq === f.id ? 'ativo' : ''}" data-acao="freq" data-id="${f.id}">${f.nome}</button>`).join('')}</div></section>
-      <section style="display:grid;gap:10px"><h2 style="font-size:1.05rem;font-weight:900">3. Dia da entrega</h2>
+      <section><h2 class="passo"><i>3</i>Dia da entrega</h2>
         <div class="chips">${[1, 2, 3, 4, 5, 6].map((d) => `<button class="chip ${escolha.dia === d ? 'ativo' : ''}" data-acao="dia" data-id="${d}">${DIAS_SEMANA[d].slice(0, 3)}</button>`).join('')}</div></section>
-      <section style="display:grid;gap:10px"><h2 style="font-size:1.05rem;font-weight:900">4. Açougue</h2>
+      <section><h2 class="passo"><i>4</i>Açougue</h2>
         <div class="chips">${ACOUGUES.map((a) => `<button class="chip ${escolha.acougue === a.id ? 'ativo' : ''}" data-acao="assin-acougue" data-id="${a.id}">${a.icone} ${esc(a.nome)}</button>`).join('')}</div></section>
       <div class="cartao resumo">
         <div><span>Plano ${esc(pl.nome)}</span><span>${dinheiro(pl.preco)}</span></div>
@@ -485,15 +491,15 @@ function conta() {
       </div>
       <div class="cartao">
         <div class="opcao"><span>Tema<small>Claro ou escuro</small></span><button class="btn btn-sec" data-tema-btn></button></div>
-        <a class="opcao" href="#/pedidos"><span>Meus pedidos<small>${meusPedidos().length} pedido(s)</small></span><span>→</span></a>
-        <a class="opcao" href="#/assinatura"><span>Minha assinatura<small>${minhaAssinatura() ? 'Ativa' : 'Nenhuma'}</small></span><span>→</span></a>
+        <a class="opcao" href="#/pedidos"><span>Meus pedidos<small>${meusPedidos().length} pedido(s)</small></span>${ic('seta')}</a>
+        <a class="opcao" href="#/assinatura"><span>Minha assinatura<small>${minhaAssinatura() ? 'Ativa' : 'Nenhuma'}</small></span>${ic('seta')}</a>
       </div>
       <div class="cartao">
         <div class="opcao"><span>Telas da demonstração<small>Abra em outro aparelho ou aba</small></span></div>
         <a class="opcao" href="acougue.html" target="_blank" rel="noopener"><span>🔪 Painel do açougue</span><span>↗</span></a>
         <a class="opcao" href="monitor.html" target="_blank" rel="noopener"><span>📺 Monitor da TV</span><span>↗</span></a>
         <div class="opcao"><span>Dados<small>${esc(fonte)}</small></span></div>
-        <button class="opcao" data-acao="zerar" style="border:0;background:none;width:100%;color:#c62828"><span>🧹 Zerar demonstração<small>Apaga pedidos e assinaturas de todos</small></span><span>→</span></button>
+        <button class="opcao opcao-perigo" data-acao="zerar"><span>Zerar demonstração<small>Apaga pedidos e assinaturas de todos</small></span>${ic('reiniciar')}</button>
       </div>
       <p class="aviso-demo">CortaÊ · demonstração do TCC · versão ${CONFIG.RELEASE}</p>`,
   };
@@ -570,7 +576,7 @@ async function finalizar(botao) {
     toast(`Não deu para enviar o pedido: ${e.message}`, 'erro');
     return;
   }
-  tela.innerHTML = `<div class="certo">✅</div><h2>${escolha.pagamento === 'dinheiro' ? 'Pedido enviado!' : 'Pagamento aprovado!'}</h2><p style="margin:0;font-weight:700">Pedido #${pedido.numero} · ${esc(a.nome)}</p>`;
+  tela.innerHTML = `<div class="certo">${ic('check')}</div><h2>${escolha.pagamento === 'dinheiro' ? 'Pedido enviado!' : 'Pagamento aprovado!'}</h2><p>Pedido #${pedido.numero} · ${esc(a.nome)}</p>`;
   statusVistos.set(pedido.id, pedido.status);
   carrinho = { acougue_id: null, itens: {} };
   salvarCarrinho();
@@ -691,7 +697,7 @@ function boasVindas() {
       <form class="caixa">
         <img src="img/marca.jpg" alt="CortaÊ — Escolha. Peça. Receba!">
         <div class="cartao">
-          <h2 style="font-weight:900">Bem-vindo(a)! 👋</h2>
+          <h2>Bem-vindo(a)! 👋</h2>
           <label class="campo">Como você se chama?<input id="bv-nome" required placeholder="Seu nome" autocomplete="given-name"></label>
           <label class="campo">Endereço de entrega<input id="bv-end" value="${esc(CLIENTE_PADRAO.endereco)}"></label>
           <button class="btn btn-pri btn-bloco" type="submit">Começar</button>

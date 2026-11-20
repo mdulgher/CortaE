@@ -4,9 +4,11 @@ import { STATUS, acougue, plano } from './catalogo.js';
 import { esc, dinheiro, hora, iniciarTema, vigiarErros, toast } from './ui.js';
 import { htmlTimeline } from './timeline.js';
 import { MapaEntrega, progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js';
+import { ic, pintarIcones } from './icones.js';
 
 vigiarErros();
 iniciarTema();
+pintarIcones();
 
 const $kpis = document.getElementById('kpis');
 const $dest = document.getElementById('destaque');
@@ -35,20 +37,20 @@ function renderKpis() {
   const hoje = new Date().toDateString();
   const doDia = pedidos.filter((p) => new Date(p.criado_em).toDateString() === hoje);
   const valor = doDia.filter((p) => p.status !== 'recusado').reduce((s, p) => s + Number(p.total), 0);
-  const k = (rotulo, v, cls = '') => `<div class="kpi ${cls}"><small>${rotulo}</small><strong>${v}</strong></div>`;
+  const k = (rotulo, v, cls = '', ponto = '') => `<div class="kpi cartao-tv ${cls}"><small>${ponto ? `<i class="${ponto}"></i>` : ''}${rotulo}</small><strong>${v}</strong></div>`;
   $kpis.innerHTML = [
     k('Pedidos hoje', doDia.length, 'k-dest'),
-    k('🔪 Em preparo', pedidos.filter((p) => p.status === 'preparando').length),
-    k('🛵 Em entrega', pedidos.filter((p) => p.status === 'saiu').length),
-    k('✅ Entregues', doDia.filter((p) => p.status === 'entregue').length),
+    k('Em preparo', pedidos.filter((p) => p.status === 'preparando').length, '', 'p-prep'),
+    k('Em entrega', pedidos.filter((p) => p.status === 'saiu').length, '', 'p-saiu'),
+    k('Entregues', doDia.filter((p) => p.status === 'entregue').length, '', 'p-ok'),
     k('Vendas do dia', dinheiro(valor)),
-    k('🔄 Assinaturas', assinaturas.filter((a) => a.status === 'ativa').length),
+    k('Assinaturas', assinaturas.filter((a) => a.status === 'ativa').length, '', 'p-assin'),
   ].join('');
 }
 
 function htmlContagem(p) {
   if (p.status !== 'saiu') return '';
-  return `<div class="contagem"><span>🛵 Motoboy a caminho</span><span>${segundosRestantes(p)}s</span></div>
+  return `<div class="contagem"><span>${ic('moto')} Motoboy a caminho</span><span>${segundosRestantes(p)}s</span></div>
     <div class="barra"><i style="width:${Math.round(progressoEntrega(p) * 100)}%"></i></div>`;
 }
 
@@ -62,7 +64,7 @@ function renderDestaque() {
   const a = acougue(p.acougue_id);
   $dest.innerHTML = `
     <div class="dest-cab"><h2>Pedido #${p.numero}</h2><span class="selo selo-${p.status}">${STATUS[p.status].icone} ${STATUS[p.status].curto}</span></div>
-    <div class="dest-quem">👤 ${esc(p.cliente_nome)} → ${a.icone} ${esc(a.nome)}<small>📍 ${esc(p.endereco)}</small></div>
+    <div class="dest-quem"><span>${esc(p.cliente_nome)} <span class="seta">pediu no</span> ${a.icone} ${esc(a.nome)}</span><small>${ic('pino', 'ic-mini')} ${esc(p.endereco)}</small></div>
     <ul class="timeline">${htmlTimeline(p)}</ul>
     <div class="dest-rodape">
       <div id="contagem">${htmlContagem(p)}</div>
@@ -74,7 +76,7 @@ function renderDestaque() {
 function renderUltimos() {
   const ult = pedidos.slice(0, 8);
   $ult.innerHTML = ult.length ? ult.map((p) => `
-    <div class="ult">
+    <div class="ult cartao-tv">
       <strong>#${p.numero} · ${esc(p.cliente_nome)}</strong>
       <small>${esc(acougue(p.acougue_id)?.nome)} · ${hora(p.criado_em)} · ${dinheiro(p.total)}</small>
       <span class="selo selo-${p.status}" style="justify-self:start">${STATUS[p.status].icone} ${STATUS[p.status].curto}</span>
