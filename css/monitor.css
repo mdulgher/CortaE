@@ -1,0 +1,69 @@
+/* Monitor da TV: tudo numa tela, sem rolagem, legível de longe */
+
+html { font-size: clamp(14px, 1.05vw, 30px); }
+body { overflow: hidden; }
+.tv { height: 100vh; display: grid; grid-template-rows: auto auto 1fr auto; gap: 1rem; padding: 1rem 1.2rem; }
+
+.tv-topo { display: flex; align-items: center; gap: 1rem; background: var(--header-grad); color: #fff; border-radius: 1.2rem; padding: .5rem 1rem; }
+.tv-logo { height: 3.6rem; -webkit-mask-image: radial-gradient(ellipse 70% 72% at 50% 50%, #000 62%, transparent 100%); mask-image: radial-gradient(ellipse 70% 72% at 50% 50%, #000 62%, transparent 100%); }
+.tv-titulo { flex: 1; }
+.tv-titulo h1 { font-size: 1.7rem; font-weight: 900; }
+.ao-vivo { display: inline-flex; align-items: center; gap: .4rem; font-weight: 900; font-size: .8rem; letter-spacing: .1em; color: var(--amarelo); }
+.ao-vivo i { width: .7rem; height: .7rem; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 0 0 rgba(255, 59, 59, .7); animation: vivo 1.4s infinite; }
+@keyframes vivo { 70% { box-shadow: 0 0 0 .6rem rgba(255, 59, 59, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0); } }
+.tv-relogio { font-size: 2rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.tv .icone-btn { width: 2.6rem; height: 2.6rem; font-size: 1.2rem; }
+
+.kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: .8rem; }
+.kpi { background: var(--surface); border-radius: 1rem; padding: .7rem 1rem; box-shadow: var(--sombra); display: grid; gap: .1rem; }
+.kpi small { color: var(--muted); font-weight: 800; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+.kpi strong { font-size: 2rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.kpi.k-dest { background: linear-gradient(140deg, #ffc21a, #f29f05); color: #3a1d00; }
+.kpi.k-dest small { color: #5c3500; }
+
+.tv-corpo { display: grid; grid-template-columns: 1.6fr 1fr; gap: 1rem; min-height: 0; }
+.tv-mapa { border-radius: 1.2rem; overflow: hidden; box-shadow: var(--sombra); min-height: 0; z-index: 0; }
+.tv .pino span { width: 3rem; height: 3rem; font-size: 1.6rem; }
+.tv-destaque { background: var(--surface); border-radius: 1.2rem; box-shadow: var(--sombra); padding: 1.1rem 1.2rem; display: grid; grid-template-rows: auto auto 1fr auto; gap: .8rem; min-height: 0; overflow: hidden; }
+.dest-cab { display: flex; justify-content: space-between; align-items: center; gap: .6rem; }
+.dest-cab h2 { font-size: 1.9rem; font-weight: 900; }
+.dest-cab .selo { font-size: .95rem; padding: .35rem .9rem; }
+.dest-quem { font-weight: 800; font-size: 1.1rem; }
+.dest-quem small { display: block; color: var(--muted); font-weight: 700; font-size: .9rem; }
+.tv .timeline li { grid-template-columns: 2.6rem 1fr auto; padding-bottom: .9rem; }
+.tv .timeline li::before { left: 1.22rem; top: 2.4rem; }
+.tv .timeline .bola { width: 2.6rem; height: 2.6rem; font-size: 1.2rem; }
+.tv .timeline .rotulo { padding-top: .55rem; font-size: 1.05rem; }
+.tv .timeline .quando { padding-top: .6rem; }
+.dest-rodape { display: grid; gap: .5rem; }
+.dest-itens { color: var(--muted); font-weight: 700; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dest-total { display: flex; justify-content: space-between; font-weight: 900; font-size: 1.3rem; }
+.contagem { display: flex; justify-content: space-between; font-weight: 900; font-size: 1.15rem; }
+.tv .barra { height: .8rem; }
+.dest-vazio { display: grid; place-content: center; justify-items: center; text-align: center; gap: .6rem; color: var(--muted); font-weight: 800; grid-row: 1 / -1; }
+.dest-vazio .grande { font-size: 4rem; }
+
+.tv-ultimos { display: flex; gap: .8rem; overflow: hidden; }
+.ult { flex: 0 0 auto; background: var(--surface); border-radius: 1rem; padding: .6rem .9rem; box-shadow: var(--sombra); display: grid; gap: .2rem; min-width: 12rem; }
+.ult strong { font-weight: 900; }
+.ult small { color: var(--muted); font-weight: 700; }
+.ult-vazio { color: var(--muted); font-weight: 800; padding: .6rem; }
+
+.anuncio {
+  position: fixed; left: 50%; top: 1.4rem; transform: translateX(-50%); z-index: 5000; min-width: 50vw;
+  background: linear-gradient(135deg, #ffc21a, #f29f05); color: #2a1400; border-radius: 1.4rem; padding: 1.2rem 2rem;
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, .45); display: flex; gap: 1.2rem; align-items: center; animation: desce .5s cubic-bezier(.2, 1.4, .4, 1);
+}
+.anuncio .ico { font-size: 3.4rem; }
+.anuncio h2 { font-size: 2rem; font-weight: 900; }
+.anuncio p { margin: .2rem 0 0; font-weight: 800; font-size: 1.15rem; }
+@keyframes desce { from { transform: translate(-50%, -150%); } }
+
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .tv { height: auto; }
+  .kpis { grid-template-columns: repeat(3, 1fr); }
+  .tv-corpo { grid-template-columns: 1fr; }
+  .tv-mapa { height: 50vh; }
+  .tv-ultimos { flex-wrap: wrap; }
+}

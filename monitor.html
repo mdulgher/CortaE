@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CortaÊ · Monitor ao vivo</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/monitor.css">
+</head>
+<body>
+  <div class="tv">
+    <header class="tv-topo">
+      <img class="tv-logo" src="img/logo.jpg" alt="CortaÊ">
+      <div class="tv-titulo"><span class="ao-vivo"><i></i> AO VIVO</span><h1>Monitor de pedidos</h1></div>
+      <div class="tv-relogio" id="relogio">--:--</div>
+      <button class="icone-btn" data-tema-btn></button>
+      <button class="icone-btn" id="btn-tela" title="Tela cheia" aria-label="Tela cheia">⛶</button>
+    </header>
+    <section class="kpis" id="kpis"></section>
+    <section class="tv-corpo">
+      <div class="tv-mapa" id="mapa"></div>
+      <aside class="tv-destaque" id="destaque"></aside>
+    </section>
+    <section class="tv-ultimos" id="ultimos"></section>
+  </div>
+  <div class="anuncio oculto" id="anuncio"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script type="module" src="js/monitor.js"></script>
+</body>
+</html>

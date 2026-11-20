@@ -1,0 +1,12 @@
+# Credenciais e anotações locais (nunca versionar)
+*.local.md
+.env*
+
+# Configuração local de ferramentas
+.claude/settings.local.json
+
+# Lixo de sistema e de sincronização
+.DS_Store
+Thumbs.db
+desktop.ini
+*.icloud

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7a0b0b">
+  <title>CortaÊ Parceiros</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔪</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/painel.css">
+</head>
+<body>
+  <header class="barra-topo">
+    <div class="marca-texto marca-painel">Corta<b>Ê</b> <span>Parceiros</span></div>
+    <label class="seletor">
+      <select id="filtro-acougue" aria-label="Açougue">
+        <option value="todos">Todos os açougues</option>
+      </select>
+    </label>
+    <div class="topo-acoes">
+      <button class="btn btn-ama" id="btn-som">🔔 Ativar som</button>
+      <button class="icone-btn" data-tema-btn></button>
+      <button class="icone-btn" id="btn-zerar" title="Zerar demonstração" aria-label="Zerar demonstração">🧹</button>
+    </div>
+  </header>
+  <nav class="abas-painel">
+    <button class="aba-p ativa" data-aba="pedidos">🧾 Pedidos <span class="cont" id="cont-novos"></span></button>
+    <button class="aba-p" data-aba="assinaturas">🔄 Assinaturas <span class="cont" id="cont-assin"></span></button>
+  </nav>
+  <main id="quadro" class="quadro"></main>
+  <main id="assinaturas" class="assin-lista oculto"></main>
+  <script type="module" src="js/acougue.js"></script>
+</body>
+</html>
