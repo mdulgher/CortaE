@@ -141,6 +141,9 @@ document.addEventListener('click', async (e) => {
       if (!ok) { el.disabled = false; return; }
       await api.mudarStatus(id, 'recusado', 'recebido');
     }
+    // Não espera o eco do tempo real: o cartão muda de coluna na hora do clique.
+    await recarregar();
+    render();
   } catch (err) {
     el.disabled = false;
     throw err;

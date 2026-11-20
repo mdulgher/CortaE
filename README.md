@@ -37,6 +37,8 @@ Abra `http://localhost:5173`, `http://localhost:5173/acougue.html` e `http://loc
 
 ## Ligar o Supabase (para usar em aparelhos diferentes)
 
+**Já está ligado** ao projeto `CortaE` desde 2026-11-20. Os passos abaixo servem só para refazer num projeto novo.
+
 1. Criar um projeto no Supabase (plano Free).
 2. No **SQL Editor**, rodar o arquivo `supabase/schema.sql` inteiro.
 3. Em **Project Settings → API**, copiar a **Project URL** e a chave **anon / publishable** para `js/config.js`
@@ -50,6 +52,8 @@ Abra `http://localhost:5173`, `http://localhost:5173/acougue.html` e `http://loc
 - No painel do açougue, tocar em **🔔 Ativar som** (o navegador só toca som depois de um toque).
 - Na TV, abrir o monitor e tocar em ⛶ para tela cheia.
 - Testar a internet do local: as três telas precisam dela (Supabase e mapa).
+- **Depois de publicar uma mudança**, o navegador pode guardar a versão antiga por até **10 minutos** (cache do GitHub Pages).
+  Não publicar nada na última hora antes da apresentação; se publicar, esperar 10 minutos e recarregar as três telas.
 
 ## No ar
 
