@@ -50,3 +50,7 @@ Abra `http://localhost:5173`, `http://localhost:5173/acougue.html` e `http://loc
 - No painel do açougue, tocar em **🔔 Ativar som** (o navegador só toca som depois de um toque).
 - Na TV, abrir o monitor e tocar em ⛶ para tela cheia.
 - Testar a internet do local: as três telas precisam dela (Supabase e mapa).
+
+## No ar
+
+https://mdulgher.github.io/CortaE/ · [painel do açougue](https://mdulgher.github.io/CortaE/acougue.html) · [monitor da TV](https://mdulgher.github.io/CortaE/monitor.html)

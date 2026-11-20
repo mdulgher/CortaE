@@ -11,5 +11,5 @@
   (`db-local.js` e `db-supabase.js`) com a mesma assinatura.
 - **Testar:** `node ferramentas/servidor.mjs` e as três telas em abas do mesmo navegador (modo local); no celular, pelo Supabase.
 - **A pasta fica no iCloud** (`C:\Users\User\iCloudDrive\CortaE_`) porque é compartilhada. Não mover.
-- **Repositório:** GitHub privado `mdulgher/CortaE`, branch `main`. Commit com o porquê. Publicar só com ordem do Marcos.
+- **Repositório:** GitHub **público** `mdulgher/CortaE`, branch `main`, publicado pelo GitHub Pages em https://mdulgher.github.io/CortaE/ a cada push. Commits com o e-mail `noreply` do GitHub (nunca o pessoal). Commit com o porquê. Push só com ordem do Marcos.
 - Responder em português do Brasil.
