@@ -24,12 +24,20 @@ export function db() {
       .then((api) => {
         // Acerta o relógio em paralelo, sem atrasar a primeira tela. Se falhar (rede caiu na abertura),
         // vale a hora do aparelho e tenta de novo quando a rede voltar ou a tela reaparecer.
+        // Uma medição por vez: ao abrir a página o navegador pode avisar "tela visível" várias vezes
+        // antes de a primeira medição terminar, e cada aviso disparava outra (vimos cinco em paralelo).
         let medido = false;
-        const medir = () => api.diferencaRelogio()
-          .then((ms) => { ajustarRelogio(ms); medido = true; })
-          .catch((e) => console.warn('Relógio não sincronizado com o servidor:', e?.message || e));
+        let medindo = false;
+        const medir = () => {
+          if (medido || medindo) return;
+          medindo = true;
+          api.diferencaRelogio()
+            .then((ms) => { ajustarRelogio(ms); medido = true; })
+            .catch((e) => console.warn('Relógio não sincronizado com o servidor:', e?.message || e))
+            .finally(() => { medindo = false; });
+        };
         medir();
-        const tentarDeNovo = () => { if (!medido && document.visibilityState === 'visible') medir(); };
+        const tentarDeNovo = () => { if (document.visibilityState === 'visible') medir(); };
         window.addEventListener('online', tentarDeNovo);
         document.addEventListener('visibilitychange', tentarDeNovo);
         return api;
