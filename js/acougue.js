@@ -55,7 +55,7 @@ function cartao(p) {
   }
   return `
     <article class="ped ${novos.has(p.id) ? 'novo' : ''}">
-      <div class="ped-cab"><strong>#${p.numero}</strong><small>${hora(p.criado_em)} · ${tempoDesde(p.criado_em)}</small></div>
+      <div class="ped-cab"><strong>#${p.numero}</strong><small>${hora(p.criado_em)} · <span data-tempo="${esc(p.criado_em)}">${tempoDesde(p.criado_em)}</span></small></div>
       ${$filtro.value === 'todos' ? `<span class="loja-tag">${a.icone} ${esc(a.nome)}</span>` : ''}
       <div class="cli">${esc(p.cliente_nome)}<small>${ic('pino', 'ic-mini')} ${esc(p.endereco)}</small></div>
       <ul>${p.itens.map((i) => `<li>${i.qtd}× ${esc(i.nome)}</li>`).join('')}</ul>
@@ -108,8 +108,13 @@ function atualizarEntregas() {
   }
 }
 
+// Recargas podem se cruzar (clique, eco do tempo real, recarga de segurança): só vale a resposta da mais nova.
+let ultimaCarga = 0;
 async function recarregar() {
-  [pedidos, assinaturas] = await Promise.all([api.listarPedidos(), api.listarAssinaturas()]);
+  const minha = ++ultimaCarga;
+  const dados = await Promise.all([api.listarPedidos(), api.listarAssinaturas()]);
+  if (minha !== ultimaCarga) return false;
+  [pedidos, assinaturas] = dados;
   const ids = new Set(pedidos.map((p) => p.id));
   if (conhecidos) {
     const chegaram = doFiltro(pedidos).filter((p) => !conhecidos.has(p.id) && p.status === 'recebido');
@@ -121,6 +126,7 @@ async function recarregar() {
     if (chegaram.length) tocarAviso();
   }
   conhecidos = ids;
+  return true;
 }
 
 document.addEventListener('click', async (e) => {
@@ -153,14 +159,16 @@ document.addEventListener('click', async (e) => {
   }
 });
 
-$som.addEventListener('click', () => {
-  liberarSom();
-  setTimeout(() => {
-    $som.classList.toggle('ligado', somLiberado());
-    $som.innerHTML = `${ic('sino')} ${somLiberado() ? 'Som ligado' : 'Ativar som'}`;
-    tocarAviso();
-  }, 50);
-});
+// O navegador só toca som depois de um clique. O botão confirma com o acorde; qualquer outro clique no
+// painel também libera o som, para o aviso de pedido novo não falhar se ninguém lembrar do botão.
+async function ligarSom(tocar) {
+  await liberarSom();
+  $som.classList.toggle('ligado', somLiberado());
+  $som.innerHTML = `${ic('sino')} ${somLiberado() ? 'Som ligado' : 'Ativar som'}`;
+  if (tocar) tocarAviso();
+}
+$som.addEventListener('click', () => ligarSom(true));
+document.addEventListener('pointerdown', () => { if (!somLiberado()) ligarSom(false); });
 
 document.getElementById('btn-zerar').addEventListener('click', async () => {
   const ok = await confirmar({ titulo: 'Zerar a demonstração?', texto: 'Apaga todos os pedidos e assinaturas, em todos os aparelhos.', ok: 'Zerar tudo', perigo: true });
@@ -175,13 +183,19 @@ async function iniciar() {
   render();
   api.ouvir(async (msg) => {
     const antes = JSON.stringify([pedidos, assinaturas]);
-    await recarregar();
+    try {
+      if (!(await recarregar())) return; // uma recarga mais nova vai desenhar
+    } catch (e) {
+      if (msg?.tipo === 'sync') { console.warn(e); return; } // sem rede: a próxima recarga tenta de novo, sem toast
+      throw e;
+    }
     if (msg?.tipo === 'sync' && antes === JSON.stringify([pedidos, assinaturas])) return; // nada mudou
     render();
   });
   setInterval(atualizarEntregas, 500);
   setInterval(() => concluirEntregasVencidas(api, pedidos).catch(() => {}), 1000);
-  setInterval(render, 15000); // "há N min"
+  // "há N s" / "há N min": troca só o texto, sem redesenhar os cartões (redesenhar engolia cliques).
+  setInterval(() => document.querySelectorAll('[data-tempo]').forEach((el) => { el.textContent = tempoDesde(el.dataset.tempo); }), 1000);
   if (api.fonte === 'local') toast('Modo local: abra o app do cliente neste mesmo navegador.', '');
 }
 

@@ -3,7 +3,9 @@
 import { agoraISO } from './relogio.js';
 
 const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
-const SYNC_MS = 20000; // rede de segurança: recarrega a cada 20 s enquanto a tela está visível
+// Rede de segurança: recarrega a cada 5 s enquanto a tela está visível. Se o tempo real cair sem avisar
+// (Wi-Fi do auditório), a entrega de 30 s não fica parada; as telas só redesenham se algo mudou.
+const SYNC_MS = 5000;
 
 export async function criar(CONFIG) {
   const { createClient } = await import(SUPABASE_JS);
@@ -12,7 +14,21 @@ export async function criar(CONFIG) {
   });
 
   const ouvintes = new Set();
-  const avisar = (msg) => ouvintes.forEach((fn) => { try { fn(msg); } catch (e) { console.error(e); } });
+  // Rajadas viram um aviso só: zerar a demo apaga N linhas e gera N eventos no mesmo instante.
+  // Na rajada vale o aviso mais forte: reset, depois mudança, depois recarga de segurança.
+  const PESO = { sync: 0, reset: 2 };
+  let pendente = null;
+  let timer = null;
+  const avisar = (msg) => {
+    if (!pendente || (PESO[msg.tipo] ?? 1) >= (PESO[pendente.tipo] ?? 1)) pendente = msg;
+    if (timer) return;
+    timer = setTimeout(() => {
+      const m = pendente;
+      pendente = null;
+      timer = null;
+      ouvintes.forEach((fn) => { try { fn(m); } catch (e) { console.error(e); } });
+    }, 80);
+  };
   const sincronizar = () => avisar({ tabela: '*', tipo: 'sync' });
 
   const canal = sb.channel('cortae-demo');
@@ -48,7 +64,9 @@ export async function criar(CONFIG) {
     async criarPedido(dados) {
       const em = agoraISO();
       const linha = { ...dados, status: 'recebido', historico: [{ status: 'recebido', em }] };
-      return ok(await sb.from('pedidos').insert(linha).select().single());
+      const p = ok(await sb.from('pedidos').insert(linha).select().single());
+      avisar({ tabela: 'pedidos', tipo: 'insert', registro: p }); // esta tela não depende do eco do tempo real
+      return p;
     },
 
     async mudarStatus(id, novo, deStatus) {
@@ -62,17 +80,23 @@ export async function criar(CONFIG) {
       if (novo === 'entregue') campos.entregue_em = em;
       // .eq('status', atual.status): se outro aparelho mudou antes, não sobrescreve.
       const linhas = ok(await sb.from('pedidos').update(campos).eq('id', id).eq('status', atual.status).select());
-      return linhas[0] || obterPedido(id);
+      if (!linhas[0]) return obterPedido(id);
+      avisar({ tabela: 'pedidos', tipo: 'update', registro: linhas[0] });
+      return linhas[0];
     },
 
     async listarAssinaturas() {
       return ok(await sb.from('assinaturas').select('*').order('criado_em', { ascending: false }).limit(300));
     },
     async criarAssinatura(dados) {
-      return ok(await sb.from('assinaturas').insert({ ...dados, status: 'ativa' }).select().single());
+      const a = ok(await sb.from('assinaturas').insert({ ...dados, status: 'ativa' }).select().single());
+      avisar({ tabela: 'assinaturas', tipo: 'insert', registro: a });
+      return a;
     },
     async atualizarAssinatura(id, campos) {
-      return ok(await sb.from('assinaturas').update(campos).eq('id', id).select().single());
+      const a = ok(await sb.from('assinaturas').update(campos).eq('id', id).select().single());
+      avisar({ tabela: 'assinaturas', tipo: 'update', registro: a });
+      return a;
     },
 
     async zerar() {

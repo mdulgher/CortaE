@@ -11,6 +11,7 @@ import {
 import { htmlTimeline } from './timeline.js';
 import { MapaEntrega, segundosRestantes, progressoEntrega, concluirEntregasVencidas } from './entrega.js';
 import { ic, pintarIcones } from './icones.js';
+import { agora } from './relogio.js';
 
 vigiarErros();
 iniciarTema();
@@ -35,6 +36,8 @@ let api;
 let mapa = null;
 let slideTimer = null;
 const statusVistos = new Map();
+let pronto = false;          // dados carregados: antes disso, os botões que gravam esperam
+let enderecoDigitado = null; // o que a pessoa digitou no carrinho e ainda não enviou
 const escolha = { pagamento: 'pix', plano: 'churrasco', freq: 'quinzenal', dia: 6, acougue: 'boi' };
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -63,6 +66,8 @@ const ABA_DE = {
 function render() {
   const r = rota();
   const view = VIEWS[r.nome] || VIEWS.inicio;
+  const campoEndereco = document.getElementById('endereco');
+  if (campoEndereco) enderecoDigitado = campoEndereco.value; // o +/- do carrinho redesenha a tela
   if (mapa) { mapa.mapa.remove(); mapa = null; }
   clearInterval(slideTimer);
   const out = view(r);
@@ -330,7 +335,7 @@ function telaCarrinho() {
           </div>`).join('')}
       </div>
       <div class="cartao"><label class="campo">Entregar em
-        <input id="endereco" value="${esc(cliente?.endereco || CLIENTE_PADRAO.endereco)}"></label></div>
+        <input id="endereco" maxlength="120" value="${esc(enderecoDigitado ?? (cliente?.endereco || CLIENTE_PADRAO.endereco))}"></label></div>
       <div class="cartao" style="display:grid;gap:10px">
         <h2 class="subtitulo">Pagamento</h2>
         <div class="pagamentos">
@@ -422,7 +427,7 @@ function telaPedidos() {
 }
 
 function proximaEntrega(dia) {
-  const d = new Date();
+  const d = new Date(agora());
   d.setDate(d.getDate() + 1);
   while (d.getDay() !== dia) d.setDate(d.getDate() + 1);
   const p2 = (n) => String(n).padStart(2, '0');
@@ -494,8 +499,8 @@ function conta() {
     topo: topoMini('Minha Conta'),
     html: `
       <div class="cartao" style="display:grid;gap:12px">
-        <label class="campo">Nome<input id="c-nome" value="${esc(cliente?.nome || '')}"></label>
-        <label class="campo">Endereço de entrega<input id="c-end" value="${esc(cliente?.endereco || '')}"></label>
+        <label class="campo">Nome<input id="c-nome" maxlength="40" value="${esc(cliente?.nome || '')}"></label>
+        <label class="campo">Endereço de entrega<input id="c-end" maxlength="120" value="${esc(cliente?.endereco || '')}"></label>
         <button class="btn btn-pri" data-acao="salvar-conta">Salvar</button>
       </div>
       <div class="cartao">
@@ -587,13 +592,15 @@ async function finalizar(botao) {
     return;
   }
   tela.innerHTML = `<div class="certo">${ic('check')}</div><h2>${escolha.pagamento === 'dinheiro' ? 'Pedido enviado!' : 'Pagamento aprovado!'}</h2><p>Pedido #${pedido.numero} · ${esc(a.nome)}</p>`;
-  statusVistos.set(pedido.id, pedido.status);
+  // Se o açougue já aceitou durante a animação, o tempo real já registrou o status novo: não volta atrás.
+  if (!statusVistos.has(pedido.id)) statusVistos.set(pedido.id, pedido.status);
+  enderecoDigitado = null;
   carrinho = { acougue_id: null, itens: {} };
   salvarCarrinho();
   await recarregar();
   if (!pedidos.some((p) => p.id === pedido.id)) pedidos.unshift(pedido);
   await esperar(1100);
-  location.hash = `#/pedido/${pedido.id}`;
+  location.replace(`#/pedido/${pedido.id}`); // o "voltar" do pedido não cai no carrinho vazio
   tela.remove();
 }
 
@@ -613,6 +620,10 @@ document.addEventListener('click', async (e) => {
   const el = e.target.closest('[data-acao]');
   if (!el) return;
   const { acao, id } = el.dataset;
+  if (!pronto && ['finalizar', 'assinar', 'pausar', 'cancelar-assin', 'zerar'].includes(acao)) {
+    toast('Carregando… toque de novo em um instante.');
+    return;
+  }
   switch (acao) {
     case 'add': return adicionar(id);
     case 'menos': return remover(id);
@@ -674,8 +685,15 @@ document.addEventListener('click', async (e) => {
 });
 
 // ---------- Dados ao vivo ----------
+// Recargas podem se cruzar (evento do tempo real + recarga de segurança): só vale a resposta da mais nova.
+// Sem isso, uma resposta velha que chega depois volta o pedido para o status anterior e repete o aviso.
+let ultimaCarga = 0;
 async function recarregar() {
-  [pedidos, assinaturas] = await Promise.all([api.listarPedidos(), api.listarAssinaturas()]);
+  const minha = ++ultimaCarga;
+  const dados = await Promise.all([api.listarPedidos(), api.listarAssinaturas()]);
+  if (minha !== ultimaCarga) return false;
+  [pedidos, assinaturas] = dados;
+  return true;
 }
 
 function avisarMudancas() {
@@ -692,8 +710,9 @@ function avisarMudancas() {
 
 let assinaturaDados = '';
 async function aoMudar(msg) {
-  await recarregar();
-  // A recarga de segurança (tela que volta a aparecer, a cada 20 s) só redesenha se algo mudou de fato,
+  if (!(await recarregar())) return; // uma recarga mais nova vai cuidar da tela
+  if (msg?.tipo === 'reset') statusVistos.clear();
+  // A recarga de segurança (tela que volta a aparecer, a cada 5 s) só redesenha se algo mudou de fato,
   // para não mexer na tela enquanto a pessoa escolhe um plano ou preenche um campo.
   const agoraDados = JSON.stringify([pedidos, assinaturas]);
   const igual = agoraDados === assinaturaDados;
@@ -703,13 +722,17 @@ async function aoMudar(msg) {
   const r = rota();
   if (r.nome === 'pedido') {
     const p = pedidos.find((x) => x.id === r.param);
-    if (p && mapa) atualizarAcompanhamento(p); else render();
+    if (p && mapa) atualizarAcompanhamento(p);
+    else if (!p && msg?.tipo === 'reset') location.hash = '#/'; // demo zerada: volta para o início
+    else render();
   } else if (r.nome === 'inicio') {
     const slot = document.getElementById('slot-ativo');
     const ativo = pedidoAtivo();
     if (slot) slot.innerHTML = ativo ? cartaoPedidoAtivo(ativo) : '';
   } else if (r.nome === 'pedidos' || r.nome === 'assinatura') {
     render();
+  } else if (r.nome === 'conta' && !document.activeElement?.matches('input')) {
+    render(); // contagem de pedidos e assinatura; não redesenha no meio da digitação
   }
 }
 
@@ -722,8 +745,8 @@ function boasVindas() {
         <img src="img/marca.jpg" alt="CortaÊ — Escolha. Peça. Receba!">
         <div class="cartao">
           <h2>Bem-vindo(a)! 👋</h2>
-          <label class="campo">Como você se chama?<input id="bv-nome" required placeholder="Seu nome" autocomplete="given-name"></label>
-          <label class="campo">Endereço de entrega<input id="bv-end" value="${esc(CLIENTE_PADRAO.endereco)}"></label>
+          <label class="campo">Como você se chama?<input id="bv-nome" required maxlength="40" placeholder="Seu nome" autocomplete="given-name"></label>
+          <label class="campo">Endereço de entrega<input id="bv-end" maxlength="120" value="${esc(CLIENTE_PADRAO.endereco)}"></label>
           <button class="btn btn-pri btn-bloco" type="submit">Começar</button>
         </div>
       </form>`;
@@ -747,11 +770,15 @@ async function iniciar() {
   render();
   api = await db();
   await recarregar();
+  pronto = true;
   meusPedidos().forEach((p) => statusVistos.set(p.id, p.status));
   if (!cliente) await boasVindas();
   render();
   assinaturaDados = JSON.stringify([pedidos, assinaturas]);
-  api.ouvir((msg) => aoMudar(msg).catch((e) => toast(e.message, 'erro')));
+  api.ouvir((msg) => aoMudar(msg).catch((e) => {
+    if (msg?.tipo === 'sync') console.warn(e); // sem rede: a próxima recarga tenta de novo, sem toast
+    else toast('Sem conexão com o servidor. Confira a internet.', 'erro');
+  }));
   window.addEventListener('hashchange', render);
   setInterval(() => {
     const r = rota();

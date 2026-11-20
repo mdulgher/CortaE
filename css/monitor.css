@@ -74,6 +74,7 @@ body { overflow: hidden; background: var(--papel-2); font-size: 1rem; }
   animation: desce .55s cubic-bezier(.2, 1.3, .4, 1);
 }
 .anuncio .ico { width: 5rem; height: 5rem; border-radius: 50%; background: var(--mostarda-suave); display: grid; place-items: center; font-size: 2.6rem; flex: none; }
+.anuncio > div { min-width: 0; overflow-wrap: anywhere; }
 .anuncio h2 { font-size: 2.05rem; }
 .anuncio p { margin: .15rem 0 0; color: var(--muted); font-weight: 500; font-size: 1.15rem; }
 @keyframes desce { from { transform: translate(-50%, -150%); } }

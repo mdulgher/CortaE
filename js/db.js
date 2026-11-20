@@ -22,8 +22,16 @@ export function db() {
       ? import('./db-supabase.js').then((m) => m.criar(CONFIG))
       : import('./db-local.js').then((m) => m.criar()))
       .then((api) => {
-        // Acerta o relógio em paralelo, sem atrasar a primeira tela; sem resposta, vale a hora do aparelho.
-        api.diferencaRelogio().then(ajustarRelogio).catch(() => {});
+        // Acerta o relógio em paralelo, sem atrasar a primeira tela. Se falhar (rede caiu na abertura),
+        // vale a hora do aparelho e tenta de novo quando a rede voltar ou a tela reaparecer.
+        let medido = false;
+        const medir = () => api.diferencaRelogio()
+          .then((ms) => { ajustarRelogio(ms); medido = true; })
+          .catch((e) => console.warn('Relógio não sincronizado com o servidor:', e?.message || e));
+        medir();
+        const tentarDeNovo = () => { if (!medido && document.visibilityState === 'visible') medir(); };
+        window.addEventListener('online', tentarDeNovo);
+        document.addEventListener('visibilitychange', tentarDeNovo);
         return api;
       });
   }

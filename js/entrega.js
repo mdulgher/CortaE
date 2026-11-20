@@ -71,6 +71,17 @@ export class MapaEntrega {
     this.pedidoId = null;
     this.pontosIniciais = ACOUGUES.map((a) => a.pos).concat([CLIENTE_PADRAO.pos]);
     this.enquadrar(this.pontosIniciais);
+    // O quadro do mapa muda de tamanho depois de criado (as fontes chegam e o topo cresce; tela cheia;
+    // janela). Sem isto o Leaflet continua com a medida antiga e corta pinos na borda de baixo.
+    let espera = 0;
+    const observador = new ResizeObserver(() => {
+      clearTimeout(espera);
+      espera = setTimeout(() => {
+        if (!el.isConnected) { observador.disconnect(); return; } // mapa removido ao trocar de tela
+        this.ajustar();
+      }, 60);
+    });
+    observador.observe(el);
   }
 
   enquadrar(pontos) {
@@ -80,6 +91,7 @@ export class MapaEntrega {
   mostrar(p) {
     const a = p && acougue(p.acougue_id);
     if (!a) {
+      if (this.pedidoId) this.enquadrar(this.pontosIniciais); // demo zerada: volta a mostrar os açougues
       this.limparRota();
       this.pedidoId = null;
       return;

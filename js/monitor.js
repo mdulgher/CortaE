@@ -25,18 +25,23 @@ let conhecidos = null;
 let assinConhecidas = null;
 let filaAnuncios = [];
 let anunciando = false;
+let destaqueId = null;
 
 const ATIVOS = ['recebido', 'preparando', 'saiu'];
 const ultimaMudanca = (p) => (p.historico?.length ? p.historico[p.historico.length - 1].em : p.criado_em);
+const recemEntregue = (p) => p.status === 'entregue' && p.entregue_em && agora() - new Date(p.entregue_em).getTime() < 8000;
+// Ordem do destaque: o pedido com motoboy na rua (e o recém-entregue, por mais 8 s, junto com o anúncio)
+// vem antes de tudo, para um pedido novo não tirar a entrega do mapa; depois os abertos; depois o resto.
+// No mesmo grupo, ganha o que mudou por último.
+const peso = (p) => (p.status === 'saiu' || recemEntregue(p) ? 2 : ATIVOS.includes(p.status) ? 1 : 0);
 
 function destaque() {
-  const ativos = pedidos.filter((p) => ATIVOS.includes(p.status));
-  const lista = (ativos.length ? ativos : pedidos).slice().sort((a, b) => (ultimaMudanca(a) < ultimaMudanca(b) ? 1 : -1));
+  const lista = pedidos.slice().sort((a, b) => peso(b) - peso(a) || (ultimaMudanca(a) < ultimaMudanca(b) ? 1 : -1));
   return lista[0] || null;
 }
 
 function renderKpis() {
-  const hoje = new Date().toDateString();
+  const hoje = new Date(agora()).toDateString();
   const doDia = pedidos.filter((p) => new Date(p.criado_em).toDateString() === hoje);
   const valor = doDia.filter((p) => p.status !== 'recusado').reduce((s, p) => s + Number(p.total), 0);
   const k = (rotulo, v, cls = '', ponto = '') => `<div class="kpi cartao-tv ${cls}"><small>${ponto ? `<i class="${ponto}"></i>` : ''}${rotulo}</small><strong>${v}</strong></div>`;
@@ -58,6 +63,7 @@ function htmlContagem(p) {
 
 function renderDestaque() {
   const p = destaque();
+  destaqueId = p?.id ?? null;
   mapa.mostrar(p);
   if (!p) {
     $dest.innerHTML = `<div class="dest-vazio"><span class="grande">📱</span>Aguardando o primeiro pedido…<small>Faça um pedido pelo app no celular</small></div>`;
@@ -107,9 +113,15 @@ function proximoAnuncio() {
   setTimeout(proximoAnuncio, 4500);
 }
 
+// Recargas podem se cruzar (evento do tempo real + recarga de segurança): só vale a resposta da mais nova,
+// e os anúncios comparam com o que já estava na tela, para nunca anunciar a mesma coisa duas vezes.
+let ultimaCarga = 0;
 async function recarregar() {
+  const minha = ++ultimaCarga;
+  const dados = await Promise.all([api.listarPedidos(), api.listarAssinaturas()]);
+  if (minha !== ultimaCarga) return false;
   const antes = new Map(pedidos.map((p) => [p.id, p.status]));
-  [pedidos, assinaturas] = await Promise.all([api.listarPedidos(), api.listarAssinaturas()]);
+  [pedidos, assinaturas] = dados;
   if (conhecidos) {
     for (const p of pedidos) {
       const a = acougue(p.acougue_id);
@@ -127,6 +139,7 @@ async function recarregar() {
   }
   conhecidos = new Set(pedidos.map((p) => p.id));
   assinConhecidas = new Set(assinaturas.map((s) => s.id));
+  return true;
 }
 
 function relogio() {
@@ -139,20 +152,33 @@ document.getElementById('btn-tela').addEventListener('click', () => {
 });
 
 async function iniciar() {
-  mapa = new MapaEntrega(document.getElementById('mapa'), { todosAcougues: true });
+  try {
+    mapa = new MapaEntrega(document.getElementById('mapa'), { todosAcougues: true });
+  } catch (e) {
+    // Sem o Leaflet (CDN fora do ar), a TV segue com os números e o pedido em destaque.
+    console.error(e);
+    mapa = { mostrar() {}, ajustar() {} };
+  }
   relogio();
   setInterval(relogio, 1000);
   api = await db();
   await recarregar();
   render();
   api.ouvir(async (msg) => {
+    if (msg?.tipo === 'reset') filaAnuncios = []; // demo zerada: avisos na fila não valem mais
     const antes = JSON.stringify([pedidos, assinaturas]);
-    await recarregar();
+    try {
+      if (!(await recarregar())) return; // uma recarga mais nova vai desenhar
+    } catch (e) {
+      if (msg?.tipo === 'sync') { console.warn(e); return; } // sem rede: a próxima recarga tenta de novo, sem toast
+      throw e;
+    }
     if (msg?.tipo === 'sync' && antes === JSON.stringify([pedidos, assinaturas])) return; // nada mudou
     render();
   });
   setInterval(() => {
     const p = destaque();
+    if ((p?.id ?? null) !== destaqueId) { renderDestaque(); return; } // ex.: o entregue sai do destaque após 8 s
     if (p?.status === 'saiu') {
       mapa.mostrar(p);
       const c = document.getElementById('contagem');
@@ -160,7 +186,6 @@ async function iniciar() {
     }
   }, 300);
   setInterval(() => concluirEntregasVencidas(api, pedidos).catch(() => {}), 1000);
-  window.addEventListener('resize', () => mapa.ajustar());
   if (api.fonte === 'local') toast('Modo local: só mostra pedidos deste navegador.', '');
 }
 

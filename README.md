@@ -51,8 +51,11 @@ Abra `http://localhost:5173`, `http://localhost:5173/acougue.html` e `http://loc
 
 - O Supabase Free **pausa o projeto depois de ~7 dias sem uso**. Abrir o app na véspera e no dia.
 - Zerar a demonstração (botão de seta circular no painel do açougue, ou Minha Conta → Zerar demonstração) para os pedidos começarem do #1.
-- No painel do açougue, tocar em **Ativar som** (o navegador só toca som depois de um toque).
-- Na TV, abrir o monitor e tocar no botão de tela cheia.
+- No painel do açougue, tocar em **Ativar som** (o navegador só toca som depois de um toque; qualquer clique no painel também libera).
+- Na TV, abrir o monitor e tocar no botão de tela cheia. Sem tela cheia o monitor também cabe, mas maior fica melhor de longe.
+- Tocar uma vez em cada tela: depois do primeiro toque, elas pedem ao aparelho para não apagar (iPhone com iOS 16.4 ou mais novo).
+  Por garantia, no iPhone: Ajustes → Tela e Brilho → Bloqueio Automático → Nunca; no Windows da TV e do painel, tela e suspensão em "Nunca".
+- Se o celular bloquear ou a rede piscar, as telas se acertam sozinhas em até 5 segundos (não precisa recarregar).
 - Testar a internet do local: as três telas precisam dela (Supabase e mapa).
 - **Depois de publicar uma mudança**, o navegador pode guardar a versão antiga por até **10 minutos** (cache do GitHub Pages).
   Não publicar nada na última hora antes da apresentação; se publicar, esperar 10 minutos e recarregar as três telas.

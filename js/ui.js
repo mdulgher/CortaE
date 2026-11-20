@@ -115,9 +115,9 @@ export function manterTelaAcesa() {
 
 // ---------- Som de aviso (WebAudio; precisa de um toque do usuário para liberar) ----------
 let audio;
-export function liberarSom() {
+export async function liberarSom() {
   audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-  if (audio.state === 'suspended') audio.resume();
+  if (audio.state === 'suspended') { try { await audio.resume(); } catch { /* sem saída de áudio */ } }
   return audio;
 }
 export function somLiberado() { return !!audio && audio.state === 'running'; }
