@@ -12,4 +12,5 @@
 - **Testar:** `node ferramentas/servidor.mjs` e as três telas em abas do mesmo navegador (modo local); no celular, pelo Supabase.
 - **A pasta fica no iCloud** (`C:\Users\User\iCloudDrive\CortaE_`) porque é compartilhada. Não mover.
 - **Repositório:** GitHub **público** `mdulgher/CortaE`, branch `main`, publicado pelo GitHub Pages em https://mdulgher.github.io/CortaE/ a cada push. Commits com o e-mail `noreply` do GitHub (nunca o pessoal). Commit com o porquê. Push só com ordem do Marcos.
+- **Fora de uso, site e banco ficam desligados** (Pages despublicado, Supabase pausado), por decisão do Marcos em 2026-11-21. Religar só a pedido dele e desligar no fim; passos no README, seção "Desligado fora de uso".
 - Responder em português do Brasil.

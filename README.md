@@ -47,6 +47,19 @@ Abra `http://localhost:5173`, `http://localhost:5173/acougue.html` e `http://loc
    (`SUPABASE_URL` e `SUPABASE_KEY`). Essa chave é pública por natureza. **Nunca** colocar a `service_role`.
 4. Publicar de novo. Para forçar o modo local mesmo com o Supabase ligado: `?fonte=local` no endereço.
 
+## Desligado fora de uso
+
+Por decisão do Marcos (2026-11-21), **o site e o banco ficam desligados** quando ninguém está usando, porque a demo
+não tem segurança (sem login, tabelas abertas). Para ensaiar ou apresentar, religar os dois **com pelo menos 15 minutos
+de folga** e desligar de novo no fim. Desligado, o site responde 404 e o banco não aceita conexão; nada se perde.
+
+| | Religar | Desligar |
+|---|---|---|
+| Banco (Supabase) | painel do Supabase → projeto `CortaE` → **Restore project** (leva alguns minutos) | painel → Project Settings → **Pause project** |
+| Site (GitHub Pages) | repositório → Settings → Pages → Source: branch `main`, pasta `/` → Save (ou `gh api -X POST repos/mdulgher/CortaE/pages -f "source[branch]=main" -f "source[path]=/"`) | Settings → Pages → **Unpublish** (ou `gh api -X DELETE repos/mdulgher/CortaE/pages`) |
+
+O Supabase Free só deixa restaurar pelo painel um projeto pausado há menos de 90 dias, o que cobre a apresentação.
+
 ## Antes de apresentar
 
 - O Supabase Free **pausa o projeto depois de ~7 dias sem uso**. Abrir o app na véspera e no dia.
