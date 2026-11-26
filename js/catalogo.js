@@ -10,6 +10,9 @@ export const ACOUGUES = [
     id: 'prime', nome: 'Açougue Prime', icone: '🔪', bairro: 'Gonzaga',
     endereco: 'Rua Marechal Deodoro, 80 — Gonzaga', pos: [-23.9668, -46.3330],
     nota: 4.9, tempo: '25–35 min', taxa: 6.9, fator: 1.15,
+    razao: 'Prime Carnes Nobres Ltda.', cnpj: '12.345.678/0001-90', plano: 'entrega', avaliacoes: 128,
+    licenca: 'CEVS 354850-001/2026', inspecao: 'SIF 1234 · frigorífico de origem',
+    docs: { alvara: 210, licenca: 95, origem: 300, boaspraticas: 160 },
     desc: 'Cortes premium e dry aged, direto do produtor.',
     rota: [[-23.9668, -46.3330], [-23.9690, -46.3318], [-23.9712, -46.3300], [-23.9718, -46.3270], [-23.9705, -46.3245]],
   },
@@ -17,6 +20,9 @@ export const ACOUGUES = [
     id: 'casa', nome: 'Casa da Carne', icone: '🐂', bairro: 'Vila Mathias',
     endereco: 'Av. Conselheiro Nébias, 120 — Vila Mathias', pos: [-23.9457, -46.3268],
     nota: 4.8, tempo: '30–40 min', taxa: 4.9, fator: 1.0,
+    razao: 'Casa da Carne Vila Mathias Comércio de Carnes Ltda.', cnpj: '23.456.789/0001-01', plano: 'entrega', avaliacoes: 342,
+    licenca: 'CEVS 354850-002/2026', inspecao: 'SISP 0456 · frigorífico de origem',
+    docs: { alvara: 140, licenca: 180, origem: 250, boaspraticas: 75 },
     desc: 'Tradição de bairro, preço justo todo dia.',
     rota: [[-23.9457, -46.3268], [-23.9500, -46.3262], [-23.9560, -46.3255], [-23.9620, -46.3250], [-23.9670, -46.3247], [-23.9705, -46.3245]],
   },
@@ -24,6 +30,9 @@ export const ACOUGUES = [
     id: 'boi', nome: 'Boi Nobre', icone: '🐄', bairro: 'Ponta da Praia',
     endereco: 'Av. Almirante Saldanha da Gama, 30 — Ponta da Praia', pos: [-23.9847, -46.3006],
     nota: 4.7, tempo: '35–45 min', taxa: 7.9, fator: 1.08,
+    razao: 'Boi Nobre Açougue e Churrascaria Ltda.', cnpj: '34.567.890/0001-12', plano: 'entrega', avaliacoes: 96,
+    licenca: 'CEVS 354850-003/2026', inspecao: 'SIM 078 Santos · frigorífico de origem',
+    docs: { alvara: 320, licenca: 12, origem: 190, boaspraticas: 230 },
     desc: 'Especialista em churrasco e kits para a família.',
     rota: [[-23.9847, -46.3006], [-23.9810, -46.3060], [-23.9775, -46.3120], [-23.9745, -46.3180], [-23.9725, -46.3220], [-23.9705, -46.3245]],
   },
@@ -38,7 +47,7 @@ export const CATEGORIAS = [
   { id: 'outros', nome: 'Outros Produtos', icone: '🧺' },
 ];
 
-const BASE = [
+export const BASE = [
   { b: 'picanha', nome: 'Picanha', cat: 'bovinos', peso: 'Peça de 1,2 kg', preco: 109.9, destaque: true },
   { b: 'alcatra', nome: 'Alcatra', cat: 'bovinos', peso: 'Bandeja de 1 kg', preco: 54.9 },
   { b: 'fraldinha', nome: 'Fraldinha', cat: 'bovinos', peso: 'Peça de 1 kg', preco: 49.9 },
@@ -100,3 +109,74 @@ export const acougue = (id) => ACOUGUES.find((a) => a.id === id);
 export const produto = (id) => PRODUTOS.find((p) => p.id === id);
 export const plano = (id) => PLANOS.find((p) => p.id === id);
 export const frequencia = (id) => FREQUENCIAS.find((f) => f.id === id);
+
+// ---------- Plano de negócio da Karla (PDF "CORTAE_plano_de_negocio_blueprint v1") ----------
+// Dados da empresa: fictícios, só para a demonstração (o Decreto 7.962/2013 pede a identificação de quem vende).
+export const EMPRESA = {
+  nome: 'CortaÊ', razao: 'CortaÊ Tecnologia Ltda. (fictícia)', cnpj: '45.678.901/0001-23',
+  sede: 'Santos (SP)', slogan: 'Escolha. Peça. Receba!',
+  missao: 'Levar carne de qualidade dos açougues da cidade até a mesa das pessoas, com praticidade e confiança.',
+  visao: 'Ser a principal plataforma de carnes da Baixada Santista e expandir para outras cidades.',
+  valores: ['Qualidade', 'Confiança', 'Praticidade', 'Parceria com o comércio local'],
+};
+
+// Planos para o açougue. Referência: os dois planos do iFood citados no PDF; valores finais a definir pelo grupo.
+export const PLANOS_PARCEIRO = [
+  { id: 'basico', nome: 'Básico', comissao: 0.12, pagOnline: 0.032, mensalidade: 110, entrega: 'O próprio açougue entrega' },
+  { id: 'entrega', nome: 'Entrega', comissao: 0.23, pagOnline: 0.032, mensalidade: 150, entrega: 'Entregadores CortaÊ' },
+];
+export const planoParceiro = (id) => PLANOS_PARCEIRO.find((p) => p.id === id) || PLANOS_PARCEIRO[1];
+
+// O que o açougue precisa para ser parceiro (item 4.2 do PDF).
+export const REQUISITOS = [
+  { id: 'cnpj', nome: 'CNPJ ativo', desc: 'Comércio varejista de carnes (CNAE 4722-9/01, açougues)', quem: 'Receita Federal' },
+  { id: 'alvara', nome: 'Alvará de funcionamento', desc: 'Autoriza o estabelecimento a funcionar no endereço', quem: 'Prefeitura de Santos' },
+  { id: 'licenca', nome: 'Licença sanitária (SIVISA / CEVS)', desc: 'Licença de funcionamento da vigilância sanitária', quem: 'Vigilância Sanitária de Santos (SEVISA)' },
+  { id: 'origem', nome: 'Carne de origem inspecionada', desc: 'Toda carne comprada de frigorífico com selo SIF, SISP ou SIM', quem: 'MAPA, estado ou município' },
+  { id: 'boaspraticas', nome: 'Boas práticas', desc: 'Manual de boas práticas e controle de temperatura (RDC ANVISA 216/2004 e Portaria CVS 3/2026)', quem: 'Vigilância sanitária' },
+  { id: 'banco', nome: 'Conta bancária no CNPJ', desc: 'Necessária para o repasse das vendas', quem: 'Banco do açougue' },
+];
+
+// Temperaturas exigidas dos parceiros (Portaria CVS 3/2026, que substituiu a CVS 5/2013 em outubro de 2026).
+export const TEMPERATURAS = [
+  ['Recebimento de carnes', 'entre 4 e 7 °C · congelados a -12 °C ou menos'],
+  ['Armazenamento (bovina, suína e aves)', 'no máximo 4 °C, por até 3 dias'],
+  ['Carne temperada e moída', 'no máximo 4 °C, por até 2 dias'],
+  ['Congelados', 'abaixo de -18 °C, por até 90 dias'],
+  ['Transporte', 'compartimento fechado, pré-resfriado e com termômetro calibrado'],
+  ['Entrega CortaÊ (padrão próprio)', 'embalagem térmica lacrada e tempo máximo de entrega'],
+];
+
+// Etapas do cadastro do parceiro (blueprint 4.1).
+export const ETAPAS_PARCEIRO = [
+  { n: 1, nome: 'Conhecer e se inscrever', desc: 'Cadastro online com CNPJ e endereço' },
+  { n: 2, nome: 'Enviar documentos', desc: 'Alvará, licença sanitária, origem da carne e conta bancária' },
+  { n: 3, nome: 'Validação', desc: 'O CortaÊ confere CNPJ, licença e origem SIF/SISP/SIM' },
+  { n: 4, nome: 'Contrato e treinamento', desc: 'Escolhe o plano; treino de painel, embalagem e lacre' },
+  { n: 5, nome: 'Montar a vitrine', desc: 'Cortes, kits, preços e horários' },
+  { n: 6, nome: 'Vender e renovar', desc: 'Aceita pedidos e mantém as licenças em dia' },
+];
+
+// Nota do açougue: a base fictícia mais as avaliações feitas na demonstração.
+export function notaAcougue(a, pedidos = []) {
+  const novas = pedidos.filter((p) => p.acougue_id === a.id && p.extras?.avaliacao).map((p) => p.extras.avaliacao.acougue);
+  const total = a.nota * a.avaliacoes + novas.reduce((s, n) => s + n, 0);
+  const qtd = a.avaliacoes + novas.length;
+  return { nota: total / qtd, qtd };
+}
+
+// Temperatura medida na entrega (simulada, estável por pedido): sempre dentro da regra (até 4 °C).
+export function temperaturaEntrega(p) {
+  const h = [...String(p.id)].reduce((s, ch) => (s * 31 + ch.charCodeAt(0)) % 1000, 7);
+  return (2.4 + (h % 15) / 10).toFixed(1).replace('.', ',');
+}
+
+// Substituto de um corte esgotado: mesma categoria e mesmo açougue; senão o mesmo corte em outro açougue.
+export function substituto(id, esgotados) {
+  const p = produto(id);
+  if (!p) return null;
+  const livre = (x) => x.id !== id && !esgotados.has(x.id);
+  return PRODUTOS.find((x) => livre(x) && x.acougue === p.acougue && x.cat === p.cat)
+    || PRODUTOS.find((x) => livre(x) && x.nome === p.nome)
+    || null;
+}

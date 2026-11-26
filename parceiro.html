@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <!-- Aplica o tema salvo antes de desenhar, para a tela não piscar no tema do sistema -->
+  <script>try { var t = localStorage.getItem('cortae.tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#9e040a">
+  <title>Seja parceiro · CortaÊ</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤝</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Figtree:wght@400;500;600;650;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/painel.css">
+  <link rel="stylesheet" href="css/blueprint.css">
+  <link rel="stylesheet" href="css/parceiro.css">
+</head>
+<body>
+  <header class="barra-topo">
+    <div class="marca-painel">
+      <img class="marca-badge" src="img/logo.jpg" alt="CortaÊ">
+      <h1>Seja parceiro<small>Cadastro do açougue · Santos (SP)</small></h1>
+    </div>
+    <div class="topo-acoes">
+      <a class="btn btn-sec" href="acougue.html">Painel do açougue</a>
+      <button class="icone-btn" data-tema-btn></button>
+    </div>
+  </header>
+  <div class="cad">
+    <nav class="etapas" id="etapas" aria-label="Etapas do cadastro"></nav>
+    <main class="cad-corpo" id="corpo"></main>
+  </div>
+  <script type="module" src="js/parceiro.js"></script>
+</body>
+</html>

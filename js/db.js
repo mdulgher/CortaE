@@ -2,12 +2,18 @@
 // Duas implementações com a mesma assinatura: db-local.js (navegador) e db-supabase.js (tempo real).
 //
 // Pedido:     { id, numero, criado_em, cliente_id, cliente_nome, endereco, acougue_id, itens[], subtotal,
-//               taxa, total, pagamento, status, historico[{status, em}], saiu_em, entregue_em }
+//               taxa, total, pagamento, status, historico[{status, em}], saiu_em, entregue_em, extras{} }
+//             extras: { conferido_em, avaliacao{acougue, entrega, comentario, em}, chat[{de, texto, em}],
+//                       reclamacao{motivo, em}, estorno{valor, motivo, em} }
+// Esgotado:   { produto_id, acougue_id, criado_em }  (corte que o açougue marcou como sem estoque)
+// Parceiro:   { id, criado_em, etapa (1..6), status ('cadastro'|'validacao'|'ativo'), dados{} }  (Seja parceiro)
 // Assinatura: { id, criado_em, cliente_id, cliente_nome, endereco, plano_id, frequencia, dia_semana,
 //               acougue_id, status ('ativa'|'pausada'|'cancelada'), proxima_entrega }
 //
 // Interface: listarPedidos, obterPedido, criarPedido, mudarStatus(id, novo, deStatus?),
-//            listarAssinaturas, criarAssinatura, atualizarAssinatura(id, campos), zerar, ouvir(fn),
+//            atualizarExtras(id, campos), listarAssinaturas, criarAssinatura, atualizarAssinatura(id, campos),
+//            listarEsgotados, marcarEsgotado(produtoId, acougueId, esgotado),
+//            listarParceiros, criarParceiro(dados), atualizarParceiro(id, campos), zerar, ouvir(fn),
 //            diferencaRelogio() (ms entre a hora do servidor e a deste aparelho; 0 no modo local)
 // ouvir(fn) também é chamado com { tipo: 'sync' } quando a tela volta a ficar visível ou a rede volta,
 // para a tela recarregar o que pode ter perdido enquanto o aparelho dormia.

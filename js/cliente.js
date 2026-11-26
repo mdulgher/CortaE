@@ -3,8 +3,11 @@ import { db, novoId } from './db.js';
 import { CONFIG } from './config.js';
 import {
   ACOUGUES, CATEGORIAS, PRODUTOS, PLANOS, FREQUENCIAS, DIAS_SEMANA, STATUS, ETAPAS, CLIENTE_PADRAO,
-  acougue, produto, plano, frequencia,
+  EMPRESA, acougue, produto, plano, frequencia, notaAcougue, temperaturaEntrega, substituto,
 } from './catalogo.js';
+import {
+  segundosParaAceite, aceiteAtrasado, mmss, estornoDe, minutosDeEntrega, MOTIVOS, estrelas, htmlAvaliacao,
+} from './regras.js';
 import {
   esc, dinheiro, hora, iniciarTema, atualizarBotoesTema, toast, confirmar, vigiarErros, manterTelaAcesa,
 } from './ui.js';
@@ -32,7 +35,11 @@ let cliente = LS.get('cortae.cliente', null);
 let carrinho = LS.get('cortae.carrinho', { acougue_id: null, itens: {} });
 let pedidos = [];
 let assinaturas = [];
+let esgotados = new Set();
+let parceiros = [];
 let api;
+const avaliando = {}; // estrelas escolhidas antes de enviar, por pedido
+const extrasVistos = new Map(); // estorno/resposta já avisados, por pedido
 let mapa = null;
 let slideTimer = null;
 const statusVistos = new Map();
@@ -59,8 +66,8 @@ function rota() {
 
 const ABA_DE = {
   inicio: 'inicio', acougues: 'inicio', acougue: 'inicio', busca: 'inicio', carrinho: 'inicio',
-  categorias: 'categorias', categoria: 'categorias', pedido: 'pedidos', pedidos: 'pedidos',
-  assinatura: 'assinatura', conta: 'conta',
+  categorias: 'categorias', categoria: 'categorias', pedido: 'pedidos', pedidos: 'pedidos', ajuda: 'pedidos',
+  assinatura: 'assinatura', conta: 'conta', sobre: 'conta',
 };
 
 function render() {
@@ -125,21 +132,32 @@ function atualizarBadge() {
 // ---------- Pedaços reutilizados ----------
 function controle(id) {
   const q = carrinho.itens[id] || 0;
+  if (!q && esgotados.has(id)) return '<span class="tag-esgotado">Esgotado</span>';
   if (!q) return `<button class="add" data-acao="add" data-id="${id}" aria-label="Adicionar">${ic('mais')}</button>`;
   return `<div class="qtd">
     <button data-acao="menos" data-id="${id}" aria-label="Diminuir">${ic('menos')}</button><span>${q}</span>
     <button data-acao="add" data-id="${id}" aria-label="Aumentar">${ic('mais')}</button></div>`;
 }
 
+// Corte esgotado: o app sugere um substituto (ponto crítico da etapa 2 do blueprint).
+function htmlSugestao(id) {
+  if (!esgotados.has(id)) return '';
+  const s = substituto(id, esgotados);
+  if (!s) return '<small class="sugestao">Sem substituto no momento</small>';
+  const outraLoja = s.acougue !== produto(id).acougue ? ` · ${esc(acougue(s.acougue).nome)}` : '';
+  return `<button class="sugestao" data-acao="add" data-id="${s.id}">Sugestão: <b>${esc(s.nome)}</b>${outraLoja} · ${dinheiro(s.preco)} ${ic('mais', 'ic-mini')}</button>`;
+}
+
 function cartaoProduto(p, mostrarLoja = false) {
   return `
-    <div class="prod">
+    <div class="prod ${esgotados.has(p.id) ? 'prod-esgotado' : ''}">
       <div class="prod-ico cat-${p.cat}">${p.icone}</div>
       <div class="prod-info">
         <strong>${esc(p.nome)}</strong>
         <small>${esc(p.peso)}</small>
         ${mostrarLoja ? `<small class="loja-nome">${esc(acougue(p.acougue).nome)}</small>` : ''}
         <span class="preco">${dinheiro(p.preco)}</span>
+        ${htmlSugestao(p.id)}
       </div>
       <div data-ctl="${p.id}">${controle(p.id)}</div>
     </div>`;
@@ -158,7 +176,8 @@ function cartaoLoja(a) {
 }
 
 function meta(a, prefixoTaxa = '') {
-  return `<div class="meta"><span class="estrela">★ ${a.nota.toFixed(1)}</span><span>${ic('relogio', 'ic-mini')} ${a.tempo}</span><span>${ic('moto', 'ic-mini')} ${prefixoTaxa}${dinheiro(a.taxa)}</span></div>`;
+  const { nota } = notaAcougue(a, pedidos);
+  return `<div class="meta"><span class="estrela">★ ${nota.toFixed(1).replace('.', ',')}</span><span>${ic('relogio', 'ic-mini')} ${a.tempo}</span><span>${ic('moto', 'ic-mini')} ${prefixoTaxa}${dinheiro(a.taxa)}</span></div>`;
 }
 
 function cartaoPedidoAtivo(p) {
@@ -172,13 +191,27 @@ function cartaoPedidoAtivo(p) {
 }
 
 // ---------- Telas ----------
+// Lembrete de recompra (etapa 6 do blueprint): o último pedido entregue, a um toque.
+function cartaoRecompra() {
+  const ultimo = meusPedidos().find((p) => p.status === 'entregue');
+  if (!ultimo || pedidoAtivo()) return '';
+  const a = acougue(ultimo.acougue_id);
+  const n = ultimo.itens.reduce((s, i) => s + i.qtd, 0);
+  return `
+    <div class="recompra">
+      <span class="ico">${ic('ciclo')}</span>
+      <span>Hora de repor?<small>Pedido #${ultimo.numero} · ${esc(a.nome)} · ${n} ${n === 1 ? 'item' : 'itens'}</small></span>
+      <button class="btn btn-ama" data-acao="repetir" data-id="${ultimo.id}">Pedir de novo</button>
+    </div>`;
+}
+const slotAtivo = () => { const ativo = pedidoAtivo(); return ativo ? cartaoPedidoAtivo(ativo) : cartaoRecompra(); };
+
 function inicio() {
-  const ativo = pedidoAtivo();
   const destaques = PRODUTOS.filter((p) => p.destaque);
   return {
     topo: topoGrande(),
     html: `
-      <div id="slot-ativo">${ativo ? cartaoPedidoAtivo(ativo) : ''}</div>
+      <div id="slot-ativo">${slotAtivo()}</div>
       <div class="atalhos">
         <a class="atalho atalho-1" href="#/acougues"><span class="ico">${ic('carne')}</span>Açougues</a>
         <a class="atalho atalho-2" href="#/categoria/kits"><span class="ico">${ic('caixa')}</span>Kits</a>
@@ -225,7 +258,10 @@ function inicio() {
               <div class="linha"><span class="preco">${dinheiro(p.preco)}</span><span data-ctl="${p.id}">${controle(p.id)}</span></div>
             </div>`).join('')}
         </div>
-      </section>`,
+      </section>
+      <a class="conheca" href="#/sobre">
+        <span><b>Conheça o CortaÊ</b><small>Açougues verificados, embalagem térmica lacrada e atendimento no app</small></span>${ic('seta')}
+      </a>`,
     depois: iniciarCarrossel,
   };
 }
@@ -246,7 +282,30 @@ function iniciarCarrossel() {
 }
 
 function listaAcougues() {
-  return { topo: topoMini('Açougues'), html: `<div class="lista">${ACOUGUES.map(cartaoLoja).join('')}</div>` };
+  // Açougues que terminaram o cadastro na página "Seja parceiro" aparecem como novidade.
+  const novos = parceiros.filter((c) => c.status === 'ativo').map((c) => `
+    <div class="loja loja-nova">
+      <div class="ico">🆕</div>
+      <div><strong>${esc(c.dados?.nome || 'Novo parceiro')} <span class="verificado" title="Parceiro verificado">✔︎</span></strong>
+        <small>Acabou de entrar no CortaÊ · vitrine chegando em breve</small>
+        <div class="meta"><span>${ic('pino', 'ic-mini')} ${esc(c.dados?.bairro || 'Santos')}</span></div></div>
+    </div>`).join('');
+  return { topo: topoMini('Açougues'), html: `<div class="lista">${ACOUGUES.map(cartaoLoja).join('')}${novos}</div>
+    <a class="conheca" href="parceiro.html"><span><b>Tem um açougue em Santos?</b><small>Seja parceiro do CortaÊ</small></span>${ic('seta')}</a>` };
+}
+
+function htmlAvaliacoesLoja(a) {
+  const { nota, qtd } = notaAcougue(a, pedidos);
+  const recentes = pedidos.filter((p) => p.acougue_id === a.id && p.extras?.avaliacao).slice(0, 5);
+  return `
+    <section>
+      <div class="secao-titulo"><h2>Avaliações</h2><span class="nota-grande">${estrelas(nota)} ${nota.toFixed(1).replace('.', ',')} · ${qtd}</span></div>
+      ${recentes.length ? recentes.map((p) => `
+        <div class="cartao aval-item">
+          <div class="secao-titulo"><b>${esc(p.cliente_nome)}</b><small>${new Date(p.extras.avaliacao.em).toLocaleDateString('pt-BR')}</small></div>
+          ${htmlAvaliacao(p.extras.avaliacao)}
+        </div>`).join('') : '<p class="aviso-demo" style="text-align:left">As avaliações feitas depois da entrega aparecem aqui.</p>'}
+    </section>`;
 }
 
 function telaAcougue(r) {
@@ -261,11 +320,27 @@ function telaAcougue(r) {
       <div class="loja-capa">
         <span class="ico">${a.icone}</span>
         <h2>${esc(a.nome)} <span class="verificado">✔︎</span></h2>
-        <small>${esc(a.endereco)} · Parceiro verificado (alvará e inspeção sanitária)</small>
+        <small>${esc(a.endereco)} · Santos - SP</small>
         ${meta(a, 'Entrega ')}
+        <div class="selos-loja">
+          <span>${ic('check', 'ic-mini')} Parceiro verificado</span>
+          <span>🏛️ Alvará e licença sanitária</span>
+          <span>🔎 Carne com selo ${esc(a.inspecao.split(' ')[0])}</span>
+          <span>🧊 Embalagem térmica lacrada</span>
+        </div>
       </div>
       <div class="chips chips-rolar">${chip('todos', 'Todos')}${CATEGORIAS.map((c) => chip(c.id, `${c.icone} ${c.nome}`)).join('')}</div>
-      <div class="lista">${prods.map((p) => cartaoProduto(p)).join('')}</div>`,
+      <div class="lista">${prods.map((p) => cartaoProduto(p)).join('')}</div>
+      ${htmlAvaliacoesLoja(a)}
+      <div class="cartao vendedor">
+        <h2 class="subtitulo">Quem vende</h2>
+        <div class="linha"><span>Razão social</span><span>${esc(a.razao)}</span></div>
+        <div class="linha"><span>CNPJ</span><span>${esc(a.cnpj)}</span></div>
+        <div class="linha"><span>Licença sanitária</span><span>${esc(a.licenca)}</span></div>
+        <div class="linha"><span>Origem da carne</span><span>${esc(a.inspecao)}</span></div>
+        <div class="linha"><span>Intermediado por</span><span>${esc(EMPRESA.razao)} · CNPJ ${esc(EMPRESA.cnpj)}</span></div>
+        <p class="aviso-demo">Dados fictícios da demonstração. Identificação exigida pelo Decreto 7.962/2013 (comércio eletrônico).</p>
+      </div>`,
   };
 }
 
@@ -328,11 +403,23 @@ function telaCarrinho() {
     html: `
       <div class="cartao">
         <div class="secao-titulo" style="margin-bottom:6px"><h2>${a.icone} ${esc(a.nome)}</h2><a href="#/acougue/${a.id}">+ itens</a></div>
-        ${itens.map(({ p, qtd }) => `
+        ${itens.map(({ p, qtd }) => {
+    if (esgotados.has(p.id)) {
+      const s = substituto(p.id, esgotados);
+      const mesmaLoja = s && s.acougue === p.acougue;
+      return `
+          <div class="item-car item-esgotado">
+            <div><strong>${esc(p.nome)}</strong><small class="alerta-txt">Esgotou agora no açougue</small>
+              ${mesmaLoja ? `<button class="sugestao" data-acao="trocar" data-id="${p.id}" data-sub="${s.id}">Trocar por <b>${esc(s.nome)}</b> · ${dinheiro(s.preco)}</button>` : ''}</div>
+            <button class="btn btn-sec" data-acao="tirar" data-id="${p.id}">Remover</button>
+          </div>`;
+    }
+    return `
           <div class="item-car">
             <div><strong>${esc(p.nome)}</strong><small>${esc(p.peso)} · ${dinheiro(p.preco)}</small><small><b>${dinheiro(p.preco * qtd)}</b></small></div>
             <div data-ctl="${p.id}">${controle(p.id)}</div>
-          </div>`).join('')}
+          </div>`;
+  }).join('')}
       </div>
       <div class="cartao"><label class="campo">Entregar em
         <input id="endereco" maxlength="120" value="${esc(enderecoDigitado ?? (cliente?.endereco || CLIENTE_PADRAO.endereco))}"></label></div>
@@ -343,7 +430,12 @@ function telaCarrinho() {
           ${pag('cartao', '💳', 'Cartão de crédito', 'Final 4242')}
           ${pag('dinheiro', '💵', 'Dinheiro na entrega', 'Leve troco para R$ 200')}
         </div>
-        <p class="aviso-demo">Demonstração: nenhum valor é cobrado de verdade.</p>
+        <p class="aviso-demo">🔒 Pagamento com checagem antifraude. Demonstração: nenhum valor é cobrado de verdade.</p>
+      </div>
+      <div class="cartao garantias">
+        <span>🧊 Embalagem térmica lacrada</span>
+        <span>${ic('relogio', 'ic-mini')} Entrega em até ${CONFIG.ENTREGA_MAX_MIN} min</span>
+        <span>💬 Atendimento no app</span>
       </div>
       <div class="cartao resumo">
         <div><span>Subtotal</span><span>${dinheiro(subtotal)}</span></div>
@@ -357,19 +449,73 @@ function telaCarrinho() {
 function htmlStatus(p) {
   const s = STATUS[p.status];
   const a = acougue(p.acougue_id);
+  const est = estornoDe(p);
+  const seg = segundosParaAceite(p);
   const sub = {
-    recebido: `Aguardando o ${a.nome} confirmar`,
-    preparando: `O ${a.nome} está separando seus cortes`,
-    saiu: `Motoboy a caminho · chega em ${segundosRestantes(p)}s`,
-    entregue: `Entregue às ${hora(p.entregue_em)}. Bom apetite! 🍖`,
-    recusado: 'O açougue não pôde atender. Nenhum valor foi cobrado.',
+    recebido: aceiteAtrasado(p)
+      ? `O ${a.nome} está demorando para aceitar. A equipe CortaÊ já foi avisada e está cuidando disso.`
+      : `Aguardando o ${a.nome} confirmar · prazo de aceite ${mmss(seg)}`,
+    preparando: `O ${a.nome} está separando seus cortes e lacrando a embalagem térmica`,
+    saiu: `Embalagem térmica lacrada · motoboy a caminho · chega em ${segundosRestantes(p)}s`,
+    entregue: `Entregue às ${hora(p.entregue_em)}, em ${minutosDeEntrega(p)} min (prazo máximo de ${CONFIG.ENTREGA_MAX_MIN} min). Bom apetite! 🍖`,
+    recusado: est
+      ? `O açougue não pôde atender. Estorno de ${dinheiro(est.valor)} feito no ${p.pagamento === 'pix' ? 'Pix' : 'cartão'}.`
+      : 'O açougue não pôde atender. Nada foi cobrado.',
   }[p.status];
   return `
-    <div class="status-topo">
+    <div class="status-topo ${p.status === 'recebido' && aceiteAtrasado(p) ? 'status-alerta' : ''}">
       <span class="ico">${s.icone}</span>
       <div><h2>${esc(s.nome)}</h2><p>${esc(sub)}</p></div>
     </div>
-    ${p.status === 'saiu' ? `<div class="barra" style="margin-top:14px"><i style="width:${Math.round(progressoEntrega(p) * 100)}%"></i></div>` : ''}`;
+    ${p.status === 'saiu' ? `<div class="barra" style="margin-top:14px"><i style="width:${Math.round(progressoEntrega(p) * 100)}%"></i></div>` : ''}
+    ${p.status === 'entregue' ? `<div class="selo-termico">🧊 Embalagem térmica lacrada · ${temperaturaEntrega(p)} °C na entrega (regra: até 4 °C)</div>` : ''}
+    ${p.extras?.estorno ? `<div class="selo-estorno">↩︎ Estorno de ${dinheiro(p.extras.estorno.valor)} aprovado · ${esc(p.extras.estorno.motivo)}</div>` : ''}`;
+}
+
+// Depois da entrega: conferir, avaliar e pedir de novo (etapas 5 e 6 do blueprint).
+function chavePos(p) {
+  const e = p.extras || {};
+  return [p.status, !!e.conferido_em, !!e.avaliacao, !!e.reclamacao, !!e.estorno].join('|');
+}
+function htmlPosEntrega(p) {
+  const e = p.extras || {};
+  const ajuda = `<a class="btn btn-sec btn-bloco" href="#/ajuda/${p.id}">💬 Ajuda com o pedido</a>`;
+  if (p.status === 'recusado') {
+    return `<button class="btn btn-pri btn-bloco" data-acao="repetir" data-id="${p.id}">Pedir em outro açougue</button>${ajuda}`;
+  }
+  if (p.status !== 'entregue') return ajuda;
+  if (!e.conferido_em) {
+    return `
+      <div class="cartao receber">
+        <h2 class="subtitulo">Confira o seu pedido</h2>
+        <ul class="checklist">
+          <li>🧊 Embalagem térmica com o lacre intacto</li>
+          <li>🌡️ Carne gelada (${temperaturaEntrega(p)} °C medidos na entrega)</li>
+          <li>📦 ${p.itens.reduce((s, i) => s + i.qtd, 0)} itens, conforme o pedido</li>
+        </ul>
+        <button class="btn btn-ok btn-bloco" data-acao="conferir" data-id="${p.id}">${ic('check')} Recebi e conferi</button>
+      </div>${ajuda}`;
+  }
+  if (!e.avaliacao) {
+    const sel = avaliando[p.id] || {};
+    const linha = (campo, rotulo) => `
+      <div class="linha-estrelas"><span>${rotulo}</span><span class="estrelas-escolha">${[1, 2, 3, 4, 5].map((n) => `
+        <button class="${(sel[campo] || 0) >= n ? 'on' : ''}" data-acao="estrela" data-id="${p.id}" data-campo="${campo}" data-n="${n}" aria-label="${n} estrela${n > 1 ? 's' : ''}">★</button>`).join('')}</span></div>`;
+    return `
+      <div class="cartao avaliar">
+        <h2 class="subtitulo">Como foi?</h2>
+        ${linha('acougue', `${esc(acougue(p.acougue_id).nome)}`)}
+        ${linha('entrega', 'Entrega')}
+        <textarea id="aval-coment" maxlength="200" rows="2" placeholder="Conte o que achou (opcional)"></textarea>
+        <button class="btn btn-pri btn-bloco" data-acao="avaliar" data-id="${p.id}">Enviar avaliação</button>
+      </div>${ajuda}`;
+  }
+  return `
+    <div class="cartao avaliado">
+      <h2 class="subtitulo">Obrigado pela avaliação! 🙌</h2>
+      ${htmlAvaliacao(e.avaliacao)}
+      <button class="btn btn-ama btn-bloco" data-acao="repetir" data-id="${p.id}">${ic('ciclo')} Pedir de novo</button>
+    </div>${ajuda}`;
 }
 
 function telaPedido(r) {
@@ -381,6 +527,7 @@ function telaPedido(r) {
     topo: topoMini(`Pedido #${p.numero}`),
     html: `
       <div class="cartao" id="ped-status">${htmlStatus(p)}</div>
+      <div id="ped-pos" class="pos-entrega" data-chave="${chavePos(p)}">${htmlPosEntrega(p)}</div>
       <div class="mapa-cliente" id="mapa"></div>
       <div class="cartao"><ul class="timeline" id="ped-timeline">${htmlTimeline(p)}</ul></div>
       <div class="cartao">
@@ -404,6 +551,9 @@ function atualizarAcompanhamento(p) {
   const tl = document.getElementById('ped-timeline');
   if (st) st.innerHTML = htmlStatus(p);
   if (tl) tl.innerHTML = htmlTimeline(p);
+  // Só redesenha o bloco de baixo quando a etapa muda, para não apagar as estrelas ou o comentário em andamento.
+  const pos = document.getElementById('ped-pos');
+  if (pos && pos.dataset.chave !== chavePos(p)) { pos.dataset.chave = chavePos(p); pos.innerHTML = htmlPosEntrega(p); }
   mapa?.mostrar(p);
 }
 
@@ -421,7 +571,9 @@ function telaPedidos() {
         <div class="ico">${a?.icone || '🥩'}</div>
         <div><strong>Pedido #${p.numero} · ${esc(a?.nome || '')}</strong>
           <small>${new Date(p.criado_em).toLocaleDateString('pt-BR')} ${hora(p.criado_em)} · ${n} ${n === 1 ? 'item' : 'itens'} · ${dinheiro(p.total)}</small>
-          <div class="meta"><span class="selo selo-${p.status}">${STATUS[p.status].icone} ${STATUS[p.status].curto}</span></div></div></a>`;
+          <div class="meta"><span class="selo selo-${p.status}">${STATUS[p.status].icone} ${STATUS[p.status].curto}</span>
+            ${p.extras?.avaliacao ? `<span>${estrelas(p.extras.avaliacao.acougue)}</span>` : ''}
+            ${estornoDe(p) ? '<span class="selo selo-recusado">↩︎ Estornado</span>' : ''}</div></div></a>`;
     }).join('')}</div>`,
   };
 }
@@ -491,6 +643,134 @@ function telaAssinatura() {
   };
 }
 
+// ---------- Atendimento (chat no app e reclamação, etapa 6 do blueprint) ----------
+function htmlChat(p) {
+  const nome = (cliente?.nome || '').split(' ')[0];
+  const msgs = [{ de: 'cortae', texto: `Olá${nome ? `, ${nome}` : ''}! Sou o atendimento CortaÊ. Como posso ajudar com o pedido #${p.numero}?` },
+    ...(p.extras?.chat || [])];
+  return msgs.map((m) => `<div class="msg msg-${m.de === 'cliente' ? 'eu' : 'cortae'}">${m.de === 'acougue' ? `<b>${esc(acougue(p.acougue_id).nome)}</b>` : ''}${esc(m.texto)}${m.em ? `<small>${hora(m.em)}</small>` : ''}</div>`).join('');
+}
+function opcoesChat(p) {
+  const op = [['onde', 'Onde está meu pedido?']];
+  if (p.status === 'entregue' && !p.extras?.reclamacao) {
+    op.push(['temperatura', MOTIVOS.temperatura], ['faltou', MOTIVOS.faltou]);
+  }
+  op.push(['pessoa', 'Falar com uma pessoa']);
+  return op.map(([id, t]) => `<button class="chip" data-acao="chat-op" data-id="${p.id}" data-op="${id}">${esc(t)}</button>`).join('');
+}
+function telaAjuda(r) {
+  const p = pedidos.find((x) => x.id === r.param);
+  if (!p) return { topo: topoMini('Ajuda'), html: '<div class="vazio">Pedido não encontrado.</div>' };
+  return {
+    topo: topoMini(`Ajuda · Pedido #${p.numero}`),
+    html: `
+      <div class="chat" id="chat">${htmlChat(p)}</div>
+      <div class="chips" id="chat-op">${opcoesChat(p)}</div>
+      <form class="chat-envio" data-id="${p.id}">
+        <input id="chat-txt" maxlength="200" placeholder="Escreva sua mensagem" autocomplete="off">
+        <button class="btn btn-pri" type="submit">Enviar</button>
+      </form>
+      <p class="aviso-demo">Demonstração: as respostas do atendimento são automáticas.</p>`,
+    depois() {
+      const chat = document.getElementById('chat');
+      chat.lastElementChild?.scrollIntoView({ block: 'end' });
+    },
+  };
+}
+function atualizarChat(p) {
+  const chat = document.getElementById('chat');
+  const op = document.getElementById('chat-op');
+  if (!chat) return;
+  const antes = chat.childElementCount;
+  chat.innerHTML = htmlChat(p);
+  op.innerHTML = opcoesChat(p);
+  if (chat.childElementCount !== antes) chat.lastElementChild?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+}
+
+function respostaOnde(p) {
+  const a = acougue(p.acougue_id);
+  return {
+    recebido: `O ${a.nome} ainda vai aceitar o pedido. Se passar do prazo, nossa equipe cobra o açougue.`,
+    preparando: `O ${a.nome} está separando os cortes e lacrando a embalagem térmica.`,
+    saiu: `O motoboy está a caminho e chega em cerca de ${segundosRestantes(p)} segundos. Acompanhe no mapa.`,
+    entregue: `O pedido foi entregue às ${hora(p.entregue_em)}.`,
+    recusado: 'O açougue recusou o pedido. Se você pagou pelo app, o estorno já foi feito.',
+  }[p.status];
+}
+
+// Grava mensagens em sequência: cada escrita parte do pedido mais novo, para não perder a anterior.
+async function falar(p, ...msgs) {
+  let atual = p;
+  for (const m of msgs) {
+    if (m.espera) await esperar(m.espera);
+    const fresco = pedidos.find((x) => x.id === atual.id) || atual;
+    const extras = { chat: [...(fresco.extras?.chat || []), { de: m.de, texto: m.texto, em: new Date(agora()).toISOString() }], ...(m.extras || {}) };
+    atual = await api.atualizarExtras(atual.id, extras);
+    const i = pedidos.findIndex((x) => x.id === atual.id);
+    if (i >= 0) pedidos[i] = atual;
+    if (rota().nome === 'ajuda') atualizarChat(atual);
+  }
+}
+
+async function opcaoChat(p, op) {
+  const a = acougue(p.acougue_id);
+  if (op === 'onde') return falar(p, { de: 'cliente', texto: 'Onde está meu pedido?' }, { de: 'cortae', texto: respostaOnde(p), espera: 900 });
+  if (op === 'pessoa') {
+    return falar(p, { de: 'cliente', texto: 'Quero falar com uma pessoa.' },
+      { de: 'cortae', texto: 'Certo! Um atendente da equipe CortaÊ já está com o seu histórico e responde por aqui.', espera: 900 });
+  }
+  const motivo = MOTIVOS[op];
+  return falar(p, { de: 'cliente', texto: motivo },
+    { de: 'cortae', texto: `Sinto muito! Abrimos a reclamação e avisamos o ${a.nome}. Se for aprovado, o estorno de ${dinheiro(p.total)} volta pelo mesmo meio de pagamento.`, espera: 900, extras: { reclamacao: { motivo, em: new Date(agora()).toISOString() } } });
+}
+
+// ---------- Sobre o CortaÊ (plano de negócio) ----------
+function telaSobre() {
+  return {
+    topo: topoMini('Sobre o CortaÊ'),
+    html: `
+      <img class="sobre-marca" src="img/marca.jpg" alt="CortaÊ — Escolha. Peça. Receba!">
+      <div class="cartao sobre">
+        <h2 class="subtitulo">O que é</h2>
+        <p>Uma plataforma de delivery de carnes, no modelo do iFood: você escolhe um açougue parceiro de Santos, monta o pedido ou escolhe um kit pronto e recebe em casa. O CortaÊ não tem açougue próprio: reúne os açougues do bairro em um só app e cuida da vitrine, do pagamento, das assinaturas e do atendimento.</p>
+      </div>
+      <div class="passos-sobre">
+        <div><b>1</b><span>Escolha</span><small>açougue, cortes ou kit</small></div>
+        <div><b>2</b><span>Peça</span><small>pague com segurança</small></div>
+        <div><b>3</b><span>Receba!</span><small>embalagem lacrada e gelada</small></div>
+      </div>
+      <div class="cartao sobre">
+        <h2 class="subtitulo">Quatro frentes</h2>
+        <div class="linha"><span>🥩 Açougues</span><span>Vitrine dos parceiros da cidade, com selo de verificação</span></div>
+        <div class="linha"><span>📦 Kits</span><span>Kits prontos: churrasco, semana e especiais</span></div>
+        <div class="linha"><span>🔄 Assinatura</span><span>Carne ou kits com a frequência que você escolher</span></div>
+        <div class="linha"><span>🧺 Outros produtos</span><span>Itens que completam o pedido</span></div>
+      </div>
+      <div class="cartao sobre">
+        <h2 class="subtitulo">Por que dá para confiar</h2>
+        <ul class="checklist">
+          <li>✔︎ Só entra açougue com CNPJ ativo, alvará, licença sanitária e carne de origem inspecionada (SIF, SISP ou SIM) conferidos</li>
+          <li>🧊 Embalagem térmica lacrada e entrega em até ${CONFIG.ENTREGA_MAX_MIN} minutos</li>
+          <li>🔒 Pagamento com checagem antifraude</li>
+          <li>⭐ Nota de cada açougue visível, dada por quem comprou</li>
+          <li>💬 Atendimento no app, com estorno quando algo dá errado</li>
+        </ul>
+      </div>
+      <div class="cartao sobre">
+        <h2 class="subtitulo">Missão, visão e valores</h2>
+        <p><b>Missão.</b> ${esc(EMPRESA.missao)}</p>
+        <p><b>Visão.</b> ${esc(EMPRESA.visao)}</p>
+        <div class="chips">${EMPRESA.valores.map((v) => `<span class="chip ativo">${esc(v)}</span>`).join('')}</div>
+      </div>
+      <div class="cartao sobre">
+        <h2 class="subtitulo">Por que "CortaÊ"</h2>
+        <p>"Corta", dos cortes de carne, com "ê", expressão descontraída que passa proximidade, modernidade e brasilidade. O pin de localização no Ê representa a entrega; o vermelho e o amarelo lembram carne, churrasco e apetite.</p>
+      </div>
+      <a class="conheca" href="parceiro.html"><span><b>Tem um açougue?</b><small>Seja parceiro do CortaÊ</small></span>${ic('seta')}</a>
+      <p class="aviso-demo">${esc(EMPRESA.razao)} · CNPJ ${esc(EMPRESA.cnpj)} · ${esc(EMPRESA.sede)}<br>Demonstração do TCC: dados fictícios.</p>`,
+  };
+}
+
 function conta() {
   const fonte = api?.fonte === 'supabase'
     ? 'Supabase · tempo real entre aparelhos'
@@ -507,13 +787,15 @@ function conta() {
         <div class="opcao"><span>Tema<small>Claro ou escuro</small></span><button class="btn btn-sec" data-tema-btn></button></div>
         <a class="opcao" href="#/pedidos"><span>Meus pedidos<small>${meusPedidos().length} pedido(s)</small></span>${ic('seta')}</a>
         <a class="opcao" href="#/assinatura"><span>Minha assinatura<small>${minhaAssinatura() ? 'Ativa' : 'Nenhuma'}</small></span>${ic('seta')}</a>
+        <a class="opcao" href="#/sobre"><span>Sobre o CortaÊ<small>Como funciona, missão e valores</small></span>${ic('seta')}</a>
       </div>
       <div class="cartao">
         <div class="opcao"><span>Telas da demonstração<small>Abra em outro aparelho ou aba</small></span></div>
         <a class="opcao" href="acougue.html" target="_blank" rel="noopener"><span>🔪 Painel do açougue</span><span>↗</span></a>
         <a class="opcao" href="monitor.html" target="_blank" rel="noopener"><span>📺 Monitor da TV</span><span>↗</span></a>
+        <a class="opcao" href="parceiro.html" target="_blank" rel="noopener"><span>🤝 Seja parceiro (cadastro do açougue)</span><span>↗</span></a>
         <div class="opcao"><span>Dados<small>${esc(fonte)}</small></span></div>
-        <button class="opcao opcao-perigo" data-acao="zerar"><span>Zerar demonstração<small>Apaga pedidos e assinaturas de todos</small></span>${ic('reiniciar')}</button>
+        <button class="opcao opcao-perigo" data-acao="zerar"><span>Zerar demonstração<small>Apaga pedidos, assinaturas, estoque e cadastros de todos</small></span>${ic('reiniciar')}</button>
       </div>
       <p class="aviso-demo">CortaÊ · demonstração do TCC · versão ${CONFIG.RELEASE}</p>`,
   };
@@ -522,6 +804,7 @@ function conta() {
 const VIEWS = {
   inicio, acougues: listaAcougues, acougue: telaAcougue, categorias, categoria, busca,
   carrinho: telaCarrinho, pedido: telaPedido, pedidos: telaPedidos, assinatura: telaAssinatura, conta,
+  ajuda: telaAjuda, sobre: telaSobre,
 };
 
 // ---------- Ações ----------
@@ -562,7 +845,53 @@ function remover(id) {
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Repete um pedido: só os itens que ainda têm estoque; se o açougue recusou, troca para o mesmo corte em outro.
+async function repetir(id) {
+  const p = pedidos.find((x) => x.id === id);
+  if (!p) return;
+  const outro = p.status === 'recusado';
+  const itens = {};
+  let lojaNova = null;
+  for (const i of p.itens) {
+    let pid = i.produto_id;
+    if (outro) {
+      const alt = PRODUTOS.find((x) => x.nome === i.nome && x.acougue !== p.acougue_id && !esgotados.has(x.id) && (!lojaNova || x.acougue === lojaNova));
+      if (!alt) continue;
+      lojaNova = alt.acougue;
+      pid = alt.id;
+    }
+    if (!esgotados.has(pid) && produto(pid)) itens[pid] = i.qtd;
+  }
+  if (!Object.keys(itens).length) { toast('Esses itens estão esgotados agora. Veja as sugestões no açougue.', 'erro'); return; }
+  if (totalItens() > 0) {
+    const ok = await confirmar({ titulo: 'Substituir o carrinho?', texto: 'O carrinho atual será trocado pelos itens deste pedido.', ok: 'Substituir' });
+    if (!ok) return;
+  }
+  carrinho = { acougue_id: lojaNova || p.acougue_id, itens };
+  salvarCarrinho();
+  const faltou = p.itens.length - Object.keys(itens).length;
+  toast(faltou ? `Itens no carrinho · ${faltou} esgotado(s) ficou(aram) de fora` : 'Itens no carrinho 🛒', 'ok');
+  location.hash = '#/carrinho';
+}
+
+// Notificação no estilo push do celular (avisos de status, estorno e lembrete de recompra).
+function notificar(titulo, texto, link) {
+  const el = document.createElement(link ? 'a' : 'div');
+  el.className = 'push';
+  if (link) el.href = link;
+  el.innerHTML = `<img src="img/icone-180.png" alt=""><div><small>CortaÊ · agora</small><b>${esc(titulo)}</b><span>${esc(texto)}</span></div>`;
+  el.setAttribute('role', 'status');
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('entra'));
+  el.addEventListener('click', () => el.remove());
+  setTimeout(() => el.classList.remove('entra'), 4600);
+  setTimeout(() => el.remove(), 5200);
+  if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(180);
+}
+
 async function finalizar(botao) {
+  const semEstoque = Object.keys(carrinho.itens).filter((id) => esgotados.has(id));
+  if (semEstoque.length) { toast('Troque ou remova os itens esgotados antes de pedir.', 'erro'); return; }
   botao.disabled = true;
   const endereco = document.getElementById('endereco').value.trim() || cliente.endereco;
   cliente.endereco = endereco;
@@ -577,13 +906,22 @@ async function finalizar(botao) {
     cliente_id: cliente.id, cliente_nome: cliente.nome, endereco, acougue_id: a.id, itens,
     subtotal, taxa: a.taxa, total: round2(subtotal + a.taxa), pagamento: escolha.pagamento,
   };
+  const online = escolha.pagamento !== 'dinheiro';
+  // Etapa 3 do blueprint: cobrança com checagem de fraude e confirmação por e-mail (tudo encenado).
+  const passos = online
+    ? ['Checagem antifraude', 'Pagamento aprovado', 'Pedido enviado ao açougue', 'Confirmação enviada por e-mail']
+    : ['Pedido enviado ao açougue', 'Confirmação enviada por e-mail'];
   const tela = document.createElement('div');
   tela.className = 'processando';
-  tela.innerHTML = `<div class="roda"></div><h2>${escolha.pagamento === 'dinheiro' ? 'Enviando pedido…' : 'Processando pagamento…'}</h2>`;
+  tela.innerHTML = `<div class="roda"></div><h2>${online ? 'Processando pagamento…' : 'Enviando pedido…'}</h2>
+    <ul class="passos-pag">${passos.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>`;
   document.body.appendChild(tela);
+  const itensPag = [...tela.querySelectorAll('.passos-pag li')];
+  const marcar = (i) => itensPag[i]?.classList.add('ok');
   let pedido;
   try {
-    [pedido] = await Promise.all([api.criarPedido(dados), esperar(1400)]);
+    const animacao = (async () => { for (let i = 0; i < passos.length - 1; i++) { await esperar(650); marcar(i); } })();
+    [pedido] = await Promise.all([api.criarPedido(dados), animacao]);
   } catch (e) {
     tela.remove();
     botao.disabled = false;
@@ -591,7 +929,10 @@ async function finalizar(botao) {
     toast('O pedido não foi enviado. Confira a internet e toque em "Fazer pedido" de novo.', 'erro');
     return;
   }
-  tela.innerHTML = `<div class="certo">${ic('check')}</div><h2>${escolha.pagamento === 'dinheiro' ? 'Pedido enviado!' : 'Pagamento aprovado!'}</h2><p>Pedido #${pedido.numero} · ${esc(a.nome)}</p>`;
+  marcar(passos.length - 1);
+  tela.querySelector('.roda').outerHTML = `<div class="certo">${ic('check')}</div>`;
+  tela.querySelector('h2').textContent = online ? 'Pagamento aprovado!' : 'Pedido enviado!';
+  tela.querySelector('h2').insertAdjacentHTML('afterend', `<p>Pedido #${pedido.numero} · ${esc(a.nome)}</p>`);
   // Se o açougue já aceitou durante a animação, o tempo real já registrou o status novo: não volta atrás.
   if (!statusVistos.has(pedido.id)) statusVistos.set(pedido.id, pedido.status);
   enderecoDigitado = null;
@@ -620,11 +961,56 @@ document.addEventListener('click', async (e) => {
   const el = e.target.closest('[data-acao]');
   if (!el) return;
   const { acao, id } = el.dataset;
-  if (!pronto && ['finalizar', 'assinar', 'pausar', 'cancelar-assin', 'zerar'].includes(acao)) {
+  if (!pronto && ['finalizar', 'assinar', 'pausar', 'cancelar-assin', 'zerar', 'conferir', 'avaliar', 'chat-op', 'repetir'].includes(acao)) {
     toast('Carregando… toque de novo em um instante.');
     return;
   }
   switch (acao) {
+    case 'repetir': return repetir(id);
+    case 'tirar':
+      delete carrinho.itens[id];
+      if (!totalItens()) carrinho.acougue_id = null;
+      salvarCarrinho();
+      return render();
+    case 'trocar': {
+      const q = carrinho.itens[id];
+      delete carrinho.itens[id];
+      carrinho.itens[el.dataset.sub] = (carrinho.itens[el.dataset.sub] || 0) + q;
+      salvarCarrinho();
+      toast(`Trocado por ${produto(el.dataset.sub).nome}`, 'ok');
+      return render();
+    }
+    case 'conferir':
+      el.disabled = true;
+      await api.atualizarExtras(id, { conferido_em: new Date(agora()).toISOString() });
+      await recarregar();
+      return atualizarAcompanhamento(pedidos.find((x) => x.id === id));
+    case 'estrela': {
+      avaliando[id] = { ...(avaliando[id] || {}), [el.dataset.campo]: Number(el.dataset.n) };
+      el.parentElement.querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.n) <= Number(el.dataset.n)));
+      return;
+    }
+    case 'avaliar': {
+      const sel = avaliando[id] || {};
+      if (!sel.acougue || !sel.entrega) { toast('Toque nas estrelas do açougue e da entrega.', 'erro'); return; }
+      el.disabled = true;
+      const comentario = document.getElementById('aval-coment')?.value.trim() || '';
+      const p = await api.atualizarExtras(id, { avaliacao: { ...sel, comentario, em: new Date(agora()).toISOString() } });
+      delete avaliando[id];
+      await recarregar();
+      atualizarAcompanhamento(pedidos.find((x) => x.id === id) || p);
+      toast('Avaliação enviada. Obrigado! ⭐', 'ok');
+      // Lembrete de recompra: na vida real viria dias depois; na demo, alguns segundos.
+      setTimeout(() => notificar('Hora de repor? 🥩', `Peça de novo o pedido #${p.numero} em um toque.`, '#/'), 7000);
+      return;
+    }
+    case 'chat-op': {
+      const p = pedidos.find((x) => x.id === id);
+      if (!p) return;
+      document.querySelectorAll('#chat-op button').forEach((b) => { b.disabled = true; });
+      try { await opcaoChat(p, el.dataset.op); } finally { document.querySelectorAll('#chat-op button').forEach((b) => { b.disabled = false; }); }
+      return;
+    }
     case 'add': return adicionar(id);
     case 'menos': return remover(id);
     case 'voltar': if (history.length > 1) history.back(); else location.hash = '#/'; return;
@@ -684,27 +1070,53 @@ document.addEventListener('click', async (e) => {
   }
 });
 
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('.chat-envio');
+  if (!form) return;
+  e.preventDefault();
+  const input = form.querySelector('input');
+  const texto = input.value.trim();
+  const p = pedidos.find((x) => x.id === form.dataset.id);
+  if (!texto || !p || !pronto) return;
+  input.value = '';
+  await falar(p, { de: 'cliente', texto },
+    { de: 'cortae', texto: 'Recebemos sua mensagem. Um atendente da equipe CortaÊ responde por aqui em instantes.', espera: 900 });
+});
+
 // ---------- Dados ao vivo ----------
 // Recargas podem se cruzar (evento do tempo real + recarga de segurança): só vale a resposta da mais nova.
 // Sem isso, uma resposta velha que chega depois volta o pedido para o status anterior e repete o aviso.
 let ultimaCarga = 0;
 async function recarregar() {
   const minha = ++ultimaCarga;
-  const dados = await Promise.all([api.listarPedidos(), api.listarAssinaturas()]);
+  const dados = await Promise.all([api.listarPedidos(), api.listarAssinaturas(), api.listarEsgotados(), api.listarParceiros()]);
   if (minha !== ultimaCarga) return false;
-  [pedidos, assinaturas] = dados;
+  let lista;
+  [pedidos, assinaturas, lista, parceiros] = dados;
+  esgotados = new Set(lista.map((x) => x.produto_id));
   return true;
 }
 
+const TEXTO_PUSH = {
+  preparando: 'O açougue aceitou e está separando seus cortes.',
+  saiu: 'Embalagem térmica lacrada. O motoboy está a caminho!',
+  entregue: 'Chegou! Confira o lacre e conte como foi.',
+  recusado: 'O açougue não pôde atender. Toque para ver o estorno.',
+};
 function avisarMudancas() {
   for (const p of meusPedidos()) {
     const antes = statusVistos.get(p.id);
     if (antes && antes !== p.status) {
       const s = STATUS[p.status];
-      toast(`${s.icone} Pedido #${p.numero}: ${s.nome}`, p.status === 'recusado' ? 'erro' : 'ok');
-      if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(180);
+      notificar(`${s.icone} Pedido #${p.numero}: ${s.nome}`, TEXTO_PUSH[p.status] || '', `#/pedido/${p.id}`);
     }
     statusVistos.set(p.id, p.status);
+    // Estorno aprovado pelo açougue depois de uma reclamação.
+    const estorno = !!p.extras?.estorno;
+    if (extrasVistos.has(p.id) && estorno && !extrasVistos.get(p.id)) {
+      notificar('↩︎ Estorno aprovado', `${dinheiro(p.extras.estorno.valor)} do pedido #${p.numero} voltam pelo mesmo meio de pagamento.`, `#/ajuda/${p.id}`);
+    }
+    extrasVistos.set(p.id, estorno);
   }
 }
 
@@ -714,7 +1126,9 @@ async function aoMudar(msg) {
   if (msg?.tipo === 'reset') statusVistos.clear();
   // A recarga de segurança (tela que volta a aparecer, a cada 5 s) só redesenha se algo mudou de fato,
   // para não mexer na tela enquanto a pessoa escolhe um plano ou preenche um campo.
-  const agoraDados = JSON.stringify([pedidos, assinaturas]);
+  const antesEsgotados = assinaturaDados ? JSON.parse(assinaturaDados)[2] : [];
+  const agoraDados = JSON.stringify([pedidos, assinaturas, [...esgotados].sort(), parceiros]);
+  const mudouEstoque = JSON.stringify(antesEsgotados) !== JSON.stringify([...esgotados].sort());
   const igual = agoraDados === assinaturaDados;
   assinaturaDados = agoraDados;
   if (msg?.tipo === 'sync' && igual) return;
@@ -725,10 +1139,19 @@ async function aoMudar(msg) {
     if (p && mapa) atualizarAcompanhamento(p);
     else if (!p && msg?.tipo === 'reset') location.hash = '#/'; // demo zerada: volta para o início
     else render();
+  } else if (r.nome === 'ajuda') {
+    const p = pedidos.find((x) => x.id === r.param);
+    if (p) atualizarChat(p);
+    else if (msg?.tipo === 'reset') location.hash = '#/';
+  } else if (['acougues', 'acougue', 'categoria', 'carrinho'].includes(r.nome)) {
+    render(); // estoque, notas e novos parceiros
+  } else if (r.nome === 'busca') {
+    if (mudouEstoque) document.getElementById('q')?.dispatchEvent(new Event('input'));
+  } else if (r.nome === 'inicio' && mudouEstoque) {
+    render();
   } else if (r.nome === 'inicio') {
     const slot = document.getElementById('slot-ativo');
-    const ativo = pedidoAtivo();
-    if (slot) slot.innerHTML = ativo ? cartaoPedidoAtivo(ativo) : '';
+    if (slot) slot.innerHTML = slotAtivo();
   } else if (r.nome === 'pedidos' || r.nome === 'assinatura') {
     render();
   } else if (r.nome === 'conta' && !document.activeElement?.matches('input')) {
@@ -774,7 +1197,8 @@ async function iniciar() {
   meusPedidos().forEach((p) => statusVistos.set(p.id, p.status));
   if (!cliente) await boasVindas();
   render();
-  assinaturaDados = JSON.stringify([pedidos, assinaturas]);
+  assinaturaDados = JSON.stringify([pedidos, assinaturas, [...esgotados].sort(), parceiros]);
+  meusPedidos().forEach((p) => extrasVistos.set(p.id, !!p.extras?.estorno));
   api.ouvir((msg) => aoMudar(msg).catch((e) => {
     if (msg?.tipo === 'sync') console.warn(e); // sem rede: a próxima recarga tenta de novo, sem toast
     else toast('Sem conexão com o servidor. Confira a internet.', 'erro');
@@ -784,7 +1208,7 @@ async function iniciar() {
     const r = rota();
     if (r.nome !== 'pedido') return;
     const p = pedidos.find((x) => x.id === r.param);
-    if (p?.status === 'saiu') atualizarAcompanhamento(p);
+    if (p?.status === 'saiu' || p?.status === 'recebido') atualizarAcompanhamento(p); // motoboy e prazo de aceite
   }, 500);
   setInterval(() => concluirEntregasVencidas(api, pedidos).catch(() => {}), 1000);
 }

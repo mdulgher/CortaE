@@ -1,0 +1,156 @@
+/* Peças do plano de negócio da Karla (blueprints do pedido e do cadastro do parceiro).
+   Carregado pelas quatro telas, depois do app.css. */
+
+/* ---------- Compartilhado: estrelas, avaliação, alertas ---------- */
+.estrelas { color: #d99a0b; letter-spacing: .04em; white-space: nowrap; }
+.estrelas i { font-style: normal; color: var(--linha); }
+.avaliacao-mini { display: grid; gap: 3px; font-size: .86rem; }
+.avaliacao-mini > span { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-weight: 600; }
+.avaliacao-mini q { color: var(--text); font-style: italic; }
+.alerta-txt { color: var(--perigo) !important; font-weight: 650; }
+.tag-esgotado { display: inline-block; font-size: .74rem; font-weight: 700; padding: 5px 10px; border-radius: 999px; background: var(--s-nao-bg); color: var(--s-nao); white-space: nowrap; }
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: .92rem; }
+
+/* ---------- Cliente: catálogo e loja ---------- */
+.prod-esgotado .prod-ico, .prod-esgotado strong, .prod-esgotado .preco { opacity: .55; }
+.sugestao {
+  justify-self: start; border: 1px dashed var(--mostarda); background: var(--mostarda-suave); color: var(--text); border-radius: 12px;
+  padding: 5px 9px; margin-top: 5px; font-size: .8rem; font-weight: 600; text-align: left; display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap;
+}
+small.sugestao { border-style: solid; border-color: var(--linha); background: var(--papel-2); }
+.item-esgotado { background: var(--s-nao-bg); margin: 0 -16px; padding: 11px 16px; }
+
+.selos-loja { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.selos-loja span { font-size: .76rem; font-weight: 650; background: var(--surface); border: 1px solid var(--linha); border-radius: 999px; padding: 4px 9px; display: inline-flex; gap: 4px; align-items: center; }
+.selos-loja .ic { color: var(--s-ok); }
+.vendedor, .sobre { display: grid; gap: 8px; }
+.vendedor .linha, .sobre .linha { display: grid; grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 10px; font-size: .88rem; border-top: 1px solid var(--linha); padding-top: 7px; }
+.vendedor .linha span:first-child, .sobre .linha span:first-child { color: var(--muted); font-weight: 600; }
+.vendedor .aviso-demo { text-align: left; }
+.sobre p { margin: 0; line-height: 1.5; }
+.nota-grande { font-weight: 650; font-size: .9rem; white-space: nowrap; }
+.aval-item { display: grid; gap: 6px; padding: 12px 14px; }
+.aval-item small { color: var(--muted); }
+
+.recompra {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; background: var(--papel-2);
+  border: 1px solid var(--linha); border-radius: 20px; padding: 12px 14px; font-weight: 650;
+}
+.recompra .ico { width: 44px; height: 44px; border-radius: 50%; background: var(--mostarda-suave); color: var(--mostarda-texto); display: grid; place-items: center; }
+.recompra small { display: block; font-weight: 500; color: var(--muted); font-size: .84rem; }
+.recompra .btn { padding: 9px 14px; font-size: .88rem; }
+.conheca {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; text-decoration: none; padding: 14px 16px;
+  border-radius: 20px; background: var(--vinho-suave); border: 1px solid var(--linha);
+}
+.conheca b { font-family: var(--f-display); font-weight: 600; font-size: 1.08rem; }
+.conheca small { display: block; color: var(--muted); font-size: .84rem; }
+.conheca > .ic { color: var(--acento); flex: none; }
+.loja-nova { border-style: dashed; }
+
+.garantias { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: .84rem; font-weight: 600; color: var(--muted); padding: 12px 16px; }
+.garantias span { display: inline-flex; gap: 5px; align-items: center; }
+
+/* ---------- Cliente: pagamento, acompanhamento e pós-entrega ---------- */
+.passos-pag { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; text-align: left; }
+.passos-pag li { display: flex; gap: 10px; align-items: center; opacity: .55; font-weight: 600; transition: opacity .3s; }
+.passos-pag li::before { content: ''; width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .5); flex: none; box-sizing: border-box; }
+.passos-pag li.ok { opacity: 1; }
+.passos-pag li.ok::before { content: '✓'; border-color: var(--mostarda); background: var(--mostarda); color: #3d2600; display: grid; place-items: center; font-size: .75rem; font-weight: 800; }
+
+.status-alerta .ico { background: var(--s-nao-bg) !important; }
+.status-alerta p { color: var(--perigo) !important; font-weight: 600; }
+.selo-termico, .selo-estorno { margin-top: 12px; font-size: .86rem; font-weight: 650; padding: 8px 12px; border-radius: 12px; background: var(--s-saiu-bg); color: var(--s-saiu); }
+.selo-estorno { background: var(--s-ok-bg); color: var(--s-ok); }
+.pos-entrega { display: grid; gap: 10px; }
+.receber, .avaliar, .avaliado { display: grid; gap: 12px; }
+.linha-estrelas { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 650; }
+.estrelas-escolha { display: flex; gap: 2px; }
+.estrelas-escolha button { border: 0; background: none; font-size: 1.9rem; line-height: 1; color: var(--linha); padding: 2px; transition: transform .12s, color .15s; }
+.estrelas-escolha button.on { color: #e3a20c; }
+.estrelas-escolha button:active { transform: scale(1.2); }
+.avaliar textarea, .chat-envio input {
+  border: 1px solid var(--linha); border-radius: 14px; padding: 11px 13px; background: var(--papel-2); font: inherit; color: inherit; width: 100%; resize: none;
+}
+
+/* Chat de atendimento */
+.chat { display: grid; gap: 8px; align-content: start; min-height: 36vh; }
+.msg { max-width: 82%; padding: 10px 13px; border-radius: 18px; font-size: .94rem; line-height: 1.4; display: grid; gap: 2px; }
+.msg small { font-size: .7rem; opacity: .7; justify-self: end; }
+.msg-cortae { background: var(--surface); border: 1px solid var(--linha); border-bottom-left-radius: 6px; justify-self: start; }
+.msg-eu { background: var(--pri); color: #fff; border-bottom-right-radius: 6px; justify-self: end; }
+.chat-envio { display: flex; gap: 8px; position: sticky; bottom: calc(92px + env(safe-area-inset-bottom)); }
+.chat-envio .btn { padding: 11px 16px; }
+
+/* Sobre o CortaÊ */
+.sobre-marca { width: 100%; border-radius: 24px; }
+.passos-sobre { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.passos-sobre div { background: var(--papel-2); border: 1px solid var(--linha); border-radius: 18px; padding: 12px 6px; display: grid; gap: 2px; justify-items: center; }
+.passos-sobre b { width: 28px; height: 28px; border-radius: 50%; background: var(--pri); color: #fff; display: grid; place-items: center; font-size: .85rem; }
+.passos-sobre span { font-family: var(--f-display); font-weight: 600; font-size: 1.05rem; }
+.passos-sobre small { color: var(--muted); font-size: .74rem; line-height: 1.2; }
+
+/* Notificação no estilo push do celular */
+.push {
+  position: fixed; left: 50%; top: calc(10px + env(safe-area-inset-top, 0px)); width: min(94vw, 440px); z-index: 9998;
+  transform: translate(-50%, -140%); transition: transform .45s cubic-bezier(.2, .9, .3, 1.2);
+  display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; align-items: center; padding: 11px 13px; border-radius: 20px;
+  background: rgba(250, 246, 244, .95); color: #2a1c1b; box-shadow: 0 10px 34px rgba(0, 0, 0, .22); text-decoration: none;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.push.entra { transform: translate(-50%, 0); }
+.push img { width: 38px; height: 38px; border-radius: 10px; }
+.push small { color: #6d5a56; font-size: .72rem; display: block; }
+.push b { display: block; font-size: .92rem; }
+.push span { font-size: .86rem; display: block; line-height: 1.3; }
+:root[data-theme="dark"] .push { background: rgba(48, 36, 34, .95); color: #f6ece9; }
+:root[data-theme="dark"] .push small { color: #b8a29d; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .push { background: rgba(48, 36, 34, .95); color: #f6ece9; }
+  :root:not([data-theme="light"]) .push small { color: #b8a29d; }
+}
+
+/* ---------- Painel do açougue ---------- */
+.alertas-painel { display: grid; gap: 8px; padding: 0 24px 14px; }
+.alertas-painel:empty { display: none; }
+.alerta-p { background: var(--mostarda-suave); color: var(--text); border: 1px solid rgba(242, 181, 58, .5); border-radius: 14px; padding: 10px 14px; font-weight: 600; font-size: .92rem; }
+.alerta-p.perigo { background: var(--s-nao-bg); border-color: transparent; color: var(--s-nao); }
+.alerta-p .link { border: 0; background: none; color: var(--acento); font-weight: 700; text-decoration: underline; padding: 0 4px; }
+.prazo { font-weight: 650; font-size: .9rem; color: var(--s-rec); background: var(--s-rec-bg); border-radius: 10px; padding: 6px 10px; display: flex; gap: 6px; align-items: center; }
+.prazo.atrasado { color: var(--s-nao); background: var(--s-nao-bg); }
+.ped.atrasado { border-color: var(--perigo); box-shadow: 0 0 0 3px rgba(192, 57, 43, .18); }
+.ped.com-reclamacao { border-color: var(--perigo); }
+.ped .extra { font-size: .86rem; font-weight: 600; color: var(--muted); background: var(--papel-2); border-radius: 10px; padding: 7px 10px; display: grid; gap: 6px; }
+.ped .extra.ok { color: var(--s-ok); background: var(--s-ok-bg); display: flex; gap: 6px; align-items: center; }
+.ped .extra.reclamacao { color: var(--s-nao); background: var(--s-nao-bg); }
+.ped .extra.reclamacao .btn { padding: 9px 12px; font-size: .88rem; }
+.ped .extra.estorno { color: var(--s-ok); background: var(--s-ok-bg); }
+.dica-painel { color: var(--muted); margin: 0 0 14px; font-size: .9rem; line-height: 1.5; }
+.bloco-loja { display: grid; gap: 10px; margin-bottom: 22px; }
+.bloco-loja h2 { font-size: 1.2rem; }
+.bloco-loja h2 small { font-family: var(--f-corpo); font-size: .82rem; color: var(--muted); font-weight: 500; margin-left: 6px; }
+.grade-estoque { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.item-estoque { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--linha); border-radius: 14px; padding: 9px 10px 9px 12px; }
+.item-estoque small { display: block; color: var(--muted); font-size: .8rem; }
+.item-estoque .btn { padding: 8px 12px; font-size: .84rem; min-width: 104px; }
+.item-estoque.esg { background: var(--s-nao-bg); border-color: transparent; }
+.resumo-repasse { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 900px) { .resumo-repasse { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cartao-p { background: var(--surface); border: 1px solid var(--linha); border-radius: 18px; padding: 12px 14px; display: grid; gap: 4px; box-shadow: var(--sombra); }
+.cartao-p small { color: var(--muted); font-weight: 600; font-size: .8rem; }
+.cartao-p strong { font-family: var(--f-display); font-size: 1.35rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cartao-p.destaque { background: var(--s-ok-bg); }
+.cartao-p.destaque strong { color: var(--s-ok); }
+.conciliacao { font-weight: 650; font-size: .88rem; padding: 9px 12px; border-radius: 12px; background: var(--s-nao-bg); color: var(--s-nao); margin-bottom: 14px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.conciliacao.ok { background: var(--s-ok-bg); color: var(--s-ok); }
+.tabela td.sit { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tabela td.sit .btn { padding: 7px 12px; font-size: .82rem; }
+@media (max-width: 640px) { .alertas-painel { padding: 0 12px 12px; } .segmento { flex-wrap: wrap; border-radius: 22px; } }
+
+/* ---------- Monitor da TV ---------- */
+.tv .alerta-tv { font-weight: 700; color: var(--s-nao); background: var(--s-nao-bg); border-radius: 14px; padding: .55rem .8rem; font-size: 1rem; }
+.tv .info-tv { font-weight: 650; color: var(--s-saiu); background: var(--s-saiu-bg); border-radius: 14px; padding: .55rem .8rem; font-size: 1rem; }
+.tv .info-tv.ok { color: var(--s-ok); background: var(--s-ok-bg); }
+.tv .info-lista { display: grid; gap: .45rem; }
+.tv .info-lista:empty { display: none; }
+.ult .marcas { display: flex; gap: .4rem; flex-wrap: wrap; font-size: .85rem; font-weight: 650; }

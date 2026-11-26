@@ -32,7 +32,7 @@ export async function criar(CONFIG) {
   const sincronizar = () => avisar({ tabela: '*', tipo: 'sync' });
 
   const canal = sb.channel('cortae-demo');
-  for (const tabela of ['pedidos', 'assinaturas']) {
+  for (const tabela of ['pedidos', 'assinaturas', 'esgotados', 'parceiros']) {
     canal.on('postgres_changes', { event: '*', schema: 'public', table: tabela }, (pl) => {
       avisar({ tabela, tipo: String(pl.eventType).toLowerCase(), registro: pl.new });
     });
@@ -85,6 +85,14 @@ export async function criar(CONFIG) {
       return linhas[0];
     },
 
+    async atualizarExtras(id, campos) {
+      const atual = await obterPedido(id);
+      if (!atual) return null;
+      const p = ok(await sb.from('pedidos').update({ extras: { ...(atual.extras || {}), ...campos } }).eq('id', id).select().single());
+      avisar({ tabela: 'pedidos', tipo: 'update', registro: p });
+      return p;
+    },
+
     async listarAssinaturas() {
       return ok(await sb.from('assinaturas').select('*').order('criado_em', { ascending: false }).limit(300));
     },
@@ -97,6 +105,29 @@ export async function criar(CONFIG) {
       const a = ok(await sb.from('assinaturas').update(campos).eq('id', id).select().single());
       avisar({ tabela: 'assinaturas', tipo: 'update', registro: a });
       return a;
+    },
+
+    async listarEsgotados() {
+      return ok(await sb.from('esgotados').select('*'));
+    },
+    async marcarEsgotado(produtoId, acougueId, esgotado) {
+      if (esgotado) ok(await sb.from('esgotados').upsert({ produto_id: produtoId, acougue_id: acougueId }));
+      else ok(await sb.from('esgotados').delete().eq('produto_id', produtoId));
+      avisar({ tabela: 'esgotados', tipo: 'update' });
+    },
+
+    async listarParceiros() {
+      return ok(await sb.from('parceiros').select('*').order('criado_em', { ascending: false }).limit(100));
+    },
+    async criarParceiro(dados) {
+      const c = ok(await sb.from('parceiros').insert({ etapa: 1, status: 'cadastro', ...dados }).select().single());
+      avisar({ tabela: 'parceiros', tipo: 'insert', registro: c });
+      return c;
+    },
+    async atualizarParceiro(id, campos) {
+      const c = ok(await sb.from('parceiros').update(campos).eq('id', id).select().single());
+      avisar({ tabela: 'parceiros', tipo: 'update', registro: c });
+      return c;
     },
 
     async zerar() {

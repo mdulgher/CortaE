@@ -19,8 +19,10 @@ create table if not exists public.pedidos (
                 check (status in ('recebido','preparando','saiu','entregue','recusado')),
   historico     jsonb not null default '[]',
   saiu_em       timestamptz,
-  entregue_em   timestamptz
+  entregue_em   timestamptz,
+  extras        jsonb not null default '{}'   -- avaliação, conferência, chat, reclamação, estorno
 );
+alter table public.pedidos add column if not exists extras jsonb not null default '{}';
 
 create table if not exists public.assinaturas (
   id               uuid primary key default gen_random_uuid(),
@@ -36,7 +38,25 @@ create table if not exists public.assinaturas (
   proxima_entrega  date
 );
 
+-- Cortes que o açougue marcou como esgotados no painel.
+create table if not exists public.esgotados (
+  produto_id  text primary key,
+  acougue_id  text not null,
+  criado_em   timestamptz not null default now()
+);
+
+-- Cadastros feitos na página "Seja parceiro".
+create table if not exists public.parceiros (
+  id         uuid primary key default gen_random_uuid(),
+  criado_em  timestamptz not null default now(),
+  etapa      integer not null default 1,
+  status     text not null default 'cadastro' check (status in ('cadastro','validacao','ativo')),
+  dados      jsonb not null default '{}'
+);
+
 alter table public.pedidos enable row level security;
+alter table public.esgotados enable row level security;
+alter table public.parceiros enable row level security;
 alter table public.assinaturas enable row level security;
 
 drop policy if exists demo_aberta on public.pedidos;
@@ -44,7 +64,12 @@ create policy demo_aberta on public.pedidos for all to anon, authenticated using
 drop policy if exists demo_aberta on public.assinaturas;
 create policy demo_aberta on public.assinaturas for all to anon, authenticated using (true) with check (true);
 
-grant select, insert, update, delete on public.pedidos, public.assinaturas to anon, authenticated;
+drop policy if exists demo_aberta on public.esgotados;
+create policy demo_aberta on public.esgotados for all to anon, authenticated using (true) with check (true);
+drop policy if exists demo_aberta on public.parceiros;
+create policy demo_aberta on public.parceiros for all to anon, authenticated using (true) with check (true);
+
+grant select, insert, update, delete on public.pedidos, public.assinaturas, public.esgotados, public.parceiros to anon, authenticated;
 
 -- Botão "zerar demo": apaga tudo e volta a numeração dos pedidos para 1.
 create or replace function public.zerar_demo() returns void
@@ -52,6 +77,8 @@ language plpgsql security definer set search_path = '' as $$
 begin
   delete from public.pedidos where true;
   delete from public.assinaturas where true;
+  delete from public.esgotados where true;
+  delete from public.parceiros where true;
   perform setval(pg_get_serial_sequence('public.pedidos', 'numero'), 1, false);
 end $$;
 grant execute on function public.zerar_demo() to anon, authenticated;
@@ -70,6 +97,14 @@ begin
   end;
   begin
     alter publication supabase_realtime add table public.assinaturas;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table public.esgotados;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table public.parceiros;
   exception when duplicate_object then null;
   end;
 end $$;

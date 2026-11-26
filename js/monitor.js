@@ -1,6 +1,7 @@
 // Monitor da TV: mostra ao vivo o pedido que está andando, o motoboy no mapa e os números do dia.
 import { db } from './db.js';
-import { STATUS, acougue, plano } from './catalogo.js';
+import { STATUS, ACOUGUES, acougue, plano, produto, notaAcougue, temperaturaEntrega } from './catalogo.js';
+import { aceiteAtrasado, estornoDe, estrelas } from './regras.js';
 import { esc, dinheiro, hora, iniciarTema, vigiarErros, toast, manterTelaAcesa } from './ui.js';
 import { htmlTimeline } from './timeline.js';
 import { MapaEntrega, progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js';
@@ -20,6 +21,9 @@ const $anuncio = document.getElementById('anuncio');
 let api;
 let pedidos = [];
 let assinaturas = [];
+let esgotados = new Set();
+let parceiros = [];
+const aceiteAvisado = new Set();
 let mapa;
 let conhecidos = null;
 let assinConhecidas = null;
@@ -43,11 +47,12 @@ function destaque() {
 function renderKpis() {
   const hoje = new Date(agora()).toDateString();
   const doDia = pedidos.filter((p) => new Date(p.criado_em).toDateString() === hoje);
-  const valor = doDia.filter((p) => p.status !== 'recusado').reduce((s, p) => s + Number(p.total), 0);
+  const valor = doDia.filter((p) => !estornoDe(p) && p.status !== 'recusado').reduce((s, p) => s + Number(p.total), 0);
   const k = (rotulo, v, cls = '', ponto = '') => `<div class="kpi cartao-tv ${cls}"><small>${ponto ? `<i class="${ponto}"></i>` : ''}${rotulo}</small><strong>${v}</strong></div>`;
   $kpis.innerHTML = [
     k('Pedidos hoje', doDia.length, 'k-dest'),
     k('Em preparo', pedidos.filter((p) => p.status === 'preparando').length, '', 'p-prep'),
+    k('Nota média', `★ ${(ACOUGUES.reduce((s, a) => s + notaAcougue(a, pedidos).nota, 0) / ACOUGUES.length).toFixed(2).replace('.', ',')}`),
     k('Em entrega', pedidos.filter((p) => p.status === 'saiu').length, '', 'p-saiu'),
     k('Entregues', doDia.filter((p) => p.status === 'entregue').length, '', 'p-ok'),
     k('Vendas do dia', dinheiro(valor), 'k-valor'),
@@ -59,6 +64,19 @@ function htmlContagem(p) {
   if (p.status !== 'saiu') return '';
   return `<div class="contagem"><span>${ic('moto')} Motoboy a caminho</span><span>${segundosRestantes(p)}s</span></div>
     <div class="barra"><i style="width:${Math.round(progressoEntrega(p) * 100)}%"></i></div>`;
+}
+
+function htmlInfoDestaque(p) {
+  const e = p.extras || {};
+  const est = estornoDe(p);
+  const linhas = [];
+  if (p.status === 'recebido' && aceiteAtrasado(p)) linhas.push('<div class="alerta-tv">⏱️ Passou do prazo de aceite · equipe CortaÊ acionada</div>');
+  if (p.status === 'saiu') linhas.push('<div class="info-tv">🧊 Embalagem térmica lacrada no açougue</div>');
+  if (p.status === 'entregue') linhas.push(`<div class="info-tv">🧊 Lacre ok · ${temperaturaEntrega(p)} °C na entrega${e.conferido_em ? ' · cliente conferiu' : ''}</div>`);
+  if (e.avaliacao) linhas.push(`<div class="info-tv ok">Avaliação: açougue ${estrelas(e.avaliacao.acougue)} · entrega ${estrelas(e.avaliacao.entrega)}</div>`);
+  if (e.reclamacao && !est) linhas.push(`<div class="alerta-tv">💬 Reclamação: ${esc(e.reclamacao.motivo)}</div>`);
+  if (est) linhas.push(`<div class="info-tv ok">↩︎ Estorno de ${dinheiro(est.valor)} · ${esc(est.motivo)}</div>`);
+  return `<div class="info-lista">${linhas.join('')}</div>`;
 }
 
 function renderDestaque() {
@@ -74,6 +92,7 @@ function renderDestaque() {
     <div class="dest-cab"><h2>Pedido #${p.numero}</h2><span class="selo selo-${p.status}">${STATUS[p.status].icone} ${STATUS[p.status].curto}</span></div>
     <div class="dest-quem"><span>${esc(p.cliente_nome)} <span class="seta">pediu no</span> ${a.icone} ${esc(a.nome)}</span><small>${ic('pino', 'ic-mini')} ${esc(p.endereco)}</small></div>
     <ul class="timeline">${htmlTimeline(p)}</ul>
+    ${htmlInfoDestaque(p)}
     <div class="dest-rodape">
       <div id="contagem">${htmlContagem(p)}</div>
       <div class="dest-itens">${p.itens.map((i) => `${i.qtd}× ${esc(i.nome)}`).join(' · ')}</div>
@@ -87,7 +106,10 @@ function renderUltimos() {
     <div class="ult cartao-tv">
       <strong>#${p.numero} · ${esc(p.cliente_nome)}</strong>
       <small>${esc(acougue(p.acougue_id)?.nome)} · ${hora(p.criado_em)} · ${dinheiro(p.total)}</small>
-      <span class="selo selo-${p.status}" style="justify-self:start">${STATUS[p.status].icone} ${STATUS[p.status].curto}</span>
+      <div class="marcas"><span class="selo selo-${p.status}">${STATUS[p.status].icone} ${STATUS[p.status].curto}</span>
+        ${p.extras?.avaliacao ? `<span>${estrelas(p.extras.avaliacao.acougue)}</span>` : ''}
+        ${p.extras?.reclamacao && !estornoDe(p) ? '<span class="selo selo-recusado">💬 Reclamação</span>' : ''}
+        ${estornoDe(p) ? '<span class="selo selo-recusado">↩︎ Estornado</span>' : ''}</div>
     </div>`).join('') : '<div class="ult-vazio">Os pedidos do dia aparecem aqui.</div>';
 }
 
@@ -118,10 +140,15 @@ function proximoAnuncio() {
 let ultimaCarga = 0;
 async function recarregar() {
   const minha = ++ultimaCarga;
-  const dados = await Promise.all([api.listarPedidos(), api.listarAssinaturas()]);
+  const dados = await Promise.all([api.listarPedidos(), api.listarAssinaturas(), api.listarEsgotados(), api.listarParceiros()]);
   if (minha !== ultimaCarga) return false;
   const antes = new Map(pedidos.map((p) => [p.id, p.status]));
-  [pedidos, assinaturas] = dados;
+  const extrasAntes = new Map(pedidos.map((p) => [p.id, p.extras || {}]));
+  const esgAntes = esgotados;
+  const parcAntes = new Map(parceiros.map((c) => [c.id, c.status]));
+  let lista;
+  [pedidos, assinaturas, lista, parceiros] = dados;
+  esgotados = new Set(lista.map((x) => x.produto_id));
   if (conhecidos) {
     for (const p of pedidos) {
       const a = acougue(p.acougue_id);
@@ -132,6 +159,23 @@ async function recarregar() {
       } else if (antes.get(p.id) !== p.status && p.status === 'entregue') {
         anunciar('✅', `Pedido #${p.numero} entregue!`, `${p.cliente_nome} recebeu às ${hora(p.entregue_em)}`);
       }
+    }
+    for (const p of pedidos) {
+      const ea = extrasAntes.get(p.id);
+      if (!ea) continue;
+      const e = p.extras || {};
+      if (e.conferido_em && !ea.conferido_em) anunciar('🧊', `Pedido #${p.numero} conferido`, `${p.cliente_nome} confirmou lacre intacto e carne gelada`);
+      if (e.avaliacao && !ea.avaliacao) anunciar('⭐', `Pedido #${p.numero} avaliado`, `Açougue ${e.avaliacao.acougue}/5 · entrega ${e.avaliacao.entrega}/5${e.avaliacao.comentario ? ` · "${e.avaliacao.comentario}"` : ''}`);
+      if (e.reclamacao && !ea.reclamacao) anunciar('💬', `Reclamação no pedido #${p.numero}`, `${e.reclamacao.motivo} · CortaÊ tratando com o ${acougue(p.acougue_id).nome}`);
+      if (e.estorno && !ea.estorno) anunciar('↩︎', 'Estorno aprovado', `${dinheiro(e.estorno.valor)} devolvidos a ${p.cliente_nome} (pedido #${p.numero})`);
+    }
+    for (const id of esgotados) {
+      if (!esgAntes.has(id)) { const pr = produto(id); anunciar('📦', 'Corte esgotado', `${pr?.nome} no ${acougue(pr?.acougue)?.nome}: o app já sugere substituto`); }
+    }
+    for (const c of parceiros) {
+      const st = parcAntes.get(c.id);
+      if (st === undefined) anunciar('🤝', 'Novo açougue se cadastrando', `${c.dados?.nome || 'Açougue'} começou o cadastro de parceiro`);
+      else if (st !== 'ativo' && c.status === 'ativo') anunciar('✅', 'Novo parceiro ativo!', `${c.dados?.nome || 'Açougue'} passou na validação e já pode vender`);
     }
     for (const s of assinaturas) {
       if (!assinConhecidas.has(s.id)) anunciar('🔄', 'Nova assinatura!', `${s.cliente_nome} assinou o plano ${plano(s.plano_id)?.nome}`);
@@ -163,20 +207,29 @@ async function iniciar() {
   setInterval(relogio, 1000);
   api = await db();
   await recarregar();
+  pedidos.filter(aceiteAtrasado).forEach((p) => aceiteAvisado.add(p.id)); // atrasos antigos não viram anúncio ao abrir a TV
   render();
   api.ouvir(async (msg) => {
     if (msg?.tipo === 'reset') filaAnuncios = []; // demo zerada: avisos na fila não valem mais
-    const antes = JSON.stringify([pedidos, assinaturas]);
+    const antes = JSON.stringify([pedidos, assinaturas, [...esgotados], parceiros]);
     try {
       if (!(await recarregar())) return; // uma recarga mais nova vai desenhar
     } catch (e) {
       if (msg?.tipo === 'sync') { console.warn(e); return; } // sem rede: a próxima recarga tenta de novo, sem toast
       throw e;
     }
-    if (msg?.tipo === 'sync' && antes === JSON.stringify([pedidos, assinaturas])) return; // nada mudou
+    if (msg?.tipo === 'sync' && antes === JSON.stringify([pedidos, assinaturas, [...esgotados], parceiros])) return; // nada mudou
     render();
   });
   setInterval(() => {
+    // Prazo de aceite estourado: anuncia uma vez e redesenha o destaque com o alerta.
+    for (const pe of pedidos) {
+      if (pe.status === 'recebido' && aceiteAtrasado(pe) && !aceiteAvisado.has(pe.id)) {
+        aceiteAvisado.add(pe.id);
+        anunciar('⏱️', `Pedido #${pe.numero} sem aceite`, `O ${acougue(pe.acougue_id).nome} passou do prazo · equipe CortaÊ acionada`);
+        renderDestaque();
+      }
+    }
     const p = destaque();
     if ((p?.id ?? null) !== destaqueId) { renderDestaque(); return; } // ex.: o entregue sai do destaque após 8 s
     if (p?.status === 'saiu') {

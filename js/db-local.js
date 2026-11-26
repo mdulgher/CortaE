@@ -3,7 +3,10 @@
 import { novoId } from './db.js';
 import { agoraISO } from './relogio.js';
 
-const CHAVES = { pedidos: 'cortae.pedidos', assinaturas: 'cortae.assinaturas' };
+const CHAVES = {
+  pedidos: 'cortae.pedidos', assinaturas: 'cortae.assinaturas',
+  esgotados: 'cortae.esgotados', parceiros: 'cortae.parceiros',
+};
 
 function ler(tabela) {
   try { return JSON.parse(localStorage.getItem(CHAVES[tabela]) || '[]'); } catch { return []; }
@@ -49,6 +52,7 @@ export function criar() {
         historico: [{ status: 'recebido', em }],
         saiu_em: null,
         entregue_em: null,
+        extras: {},
       };
       lista.push(p);
       gravar('pedidos', lista);
@@ -68,6 +72,17 @@ export function criar() {
       p.historico = [...(p.historico || []), { status: novo, em }];
       if (novo === 'saiu') p.saiu_em = em;
       if (novo === 'entregue') p.entregue_em = em;
+      gravar('pedidos', lista);
+      avisar({ tabela: 'pedidos', tipo: 'update', registro: p });
+      return p;
+    },
+
+    // Junta campos em pedido.extras (avaliação, conferência, chat, reclamação, estorno).
+    async atualizarExtras(id, campos) {
+      const lista = ler('pedidos');
+      const p = lista.find((x) => x.id === id);
+      if (!p) return null;
+      p.extras = { ...(p.extras || {}), ...campos };
       gravar('pedidos', lista);
       avisar({ tabela: 'pedidos', tipo: 'update', registro: p });
       return p;
@@ -94,9 +109,38 @@ export function criar() {
       return a;
     },
 
+    async listarEsgotados() { return ler('esgotados'); },
+
+    async marcarEsgotado(produtoId, acougueId, esgotado) {
+      const lista = ler('esgotados').filter((x) => x.produto_id !== produtoId);
+      if (esgotado) lista.push({ produto_id: produtoId, acougue_id: acougueId, criado_em: agoraISO() });
+      gravar('esgotados', lista);
+      avisar({ tabela: 'esgotados', tipo: 'update' });
+    },
+
+    async listarParceiros() { return ler('parceiros').sort(recentes); },
+
+    async criarParceiro(dados) {
+      const lista = ler('parceiros');
+      const c = { etapa: 1, status: 'cadastro', ...dados, id: novoId(), criado_em: agoraISO() };
+      lista.push(c);
+      gravar('parceiros', lista);
+      avisar({ tabela: 'parceiros', tipo: 'insert', registro: c });
+      return c;
+    },
+
+    async atualizarParceiro(id, campos) {
+      const lista = ler('parceiros');
+      const c = lista.find((x) => x.id === id);
+      if (!c) return null;
+      Object.assign(c, campos);
+      gravar('parceiros', lista);
+      avisar({ tabela: 'parceiros', tipo: 'update', registro: c });
+      return c;
+    },
+
     async zerar() {
-      gravar('pedidos', []);
-      gravar('assinaturas', []);
+      Object.keys(CHAVES).forEach((t) => gravar(t, []));
       avisar({ tabela: '*', tipo: 'reset' });
     },
 

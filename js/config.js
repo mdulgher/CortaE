@@ -7,7 +7,9 @@ export const CONFIG = {
   // Chave "anon" (pública por natureza; as regras do banco é que decidem o que ela pode).
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkeGpjbXllemNucnZzcHR5ZmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUxNzczMDksImV4cCI6MjExMDc1MzMwOX0.M2uv8nMBLzQDcZM0rJEi8z_C8coWw-FEPh5uDqGHm2s',
   ENTREGA_SEGUNDOS: 30,   // quanto tempo o motoboy leva no mapa
-  RELEASE: '0.1.0',
+  ACEITE_SEGUNDOS: 60,    // prazo máximo para o açougue aceitar; depois disso a equipe CortaÊ é alertada
+  ENTREGA_MAX_MIN: 45,    // tempo máximo de entrega prometido ao cliente (padrão próprio do CortaÊ)
+  RELEASE: '0.2.0',
 };
 
 // ?fonte=local força o modo local (só funciona entre abas do mesmo navegador).

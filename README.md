@@ -3,18 +3,42 @@
 Demonstração de um app de pedidos de carne de açougues parceiros, feita para o **TCC da Karla**.
 Não é um produto: serve para a apresentação e depois será descartada.
 
-É uma **página web responsiva**, aberta no **Safari do celular** (não é app de loja). Tem três telas:
+É uma **página web responsiva**, aberta no **Safari do celular** (não é app de loja). Tem três telas e uma página extra:
 
 | Tela | Endereço | Onde abrir na apresentação |
 |---|---|---|
 | App do cliente | `index.html` | Safari do celular |
 | Painel do açougue | `acougue.html` | notebook ou tablet de quem faz o açougue |
 | Monitor ao vivo | `monitor.html` | TV (notebook ligado por HDMI), em tela cheia (botão de tela cheia, no canto de cima) |
+| Seja parceiro | `parceiro.html` | notebook: cadastro do açougue em 6 etapas |
 
 O fluxo da demo: o cliente escolhe o açougue e os produtos, paga (simulado: Pix, cartão ou dinheiro) e acompanha o pedido.
 O açougue recebe o pedido com aviso sonoro, aceita e marca "saiu para entrega"; daí o motoboy anda sozinho no mapa
 por 30 segundos até "entregue". A TV mostra tudo ao vivo. Há também kits (produto comum) e assinatura (plano, frequência
 e dia, sem cobrança).
+
+### O que veio do plano de negócio da Karla (PDF "CORTAE_plano_de_negocio_blueprint v1", 2026-11-24)
+
+Blueprint do pedido, com os pontos críticos de cada etapa:
+
+- **Escolher:** o açougue marca um corte como esgotado (painel → Estoque) e o app mostra "esgotado" e sugere um substituto.
+  A página do açougue mostra razão social, CNPJ, licença sanitária e origem da carne (Decreto 7.962/2013), tudo fictício.
+- **Pagar:** checagem antifraude, aprovação e confirmação por e-mail, encenadas.
+- **Acompanhar:** avisos no estilo push. Há um prazo máximo de aceite (`ACEITE_SEGUNDOS`, 1 min); se estourar, o painel
+  e a TV alertam a equipe CortaÊ.
+- **Receber:** embalagem térmica lacrada, temperatura na entrega (até 4 °C) e o botão "Recebi e conferi".
+- **Avaliar e voltar:** nota do açougue e da entrega, que muda a nota do açougue no app. Também chat de atendimento e
+  reclamação; o açougue aprova o estorno, que sai do repasse. Há ainda "Pedir de novo" e um lembrete de recompra.
+- **Recusa:** um pedido pago e recusado mostra o estorno automático.
+- **Painel:** abas Estoque, Repasse (comissão do plano, taxa do pagamento online e conciliação) e Documentos
+  (vencimentos com aviso 30 dias antes e temperaturas da CVS 3/2026).
+- **Cliente:** tela "Sobre o CortaÊ", com missão, visão, valores e o porquê do nome.
+
+Blueprint do cadastro do parceiro (`parceiro.html`): inscrição, envio de documentos, validação (com uma pendência a
+corrigir), contrato com escolha do plano e treinamento, vitrine e loja ativa. O açougue novo aparece na lista do app.
+
+Comissões e mensalidades usam os planos do iFood citados no PDF (Básico 12%, Entrega 23%, mais 3,2% no pagamento online).
+São só referência: o valor final é decisão do grupo.
 
 ## Como funciona por dentro
 
@@ -24,7 +48,9 @@ e dia, sem cobrança).
 - `js/db.js` é a fachada de dados; as telas só falam com ela. Duas implementações com a mesma interface:
   - **local** (`js/db-local.js`): guarda no navegador e sincroniza só entre abas do **mesmo** navegador. Serve para ensaiar.
   - **Supabase** (`js/db-supabase.js`): tempo real entre aparelhos. É o que a apresentação usa (celular + açougue + TV).
-- O catálogo (açougues, produtos, kits, planos) é fictício e fica em `js/catalogo.js`. Só pedidos e assinaturas vão para o banco.
+- O catálogo (açougues, produtos, kits, planos, requisitos e documentos) é fictício e fica em `js/catalogo.js`.
+  O banco guarda pedidos (com `extras`: avaliação, chat, reclamação, estorno), assinaturas, cortes esgotados e cadastros de parceiros.
+- Regras comuns às telas (prazo de aceite, estorno, estrelas) ficam em `js/regras.js`; estilos das peças novas, em `css/blueprint.css`.
 - Sem login: o cliente digita o nome na primeira vez.
 
 ## Rodar no computador
@@ -35,11 +61,16 @@ Precisa só do Node.
 node ferramentas/servidor.mjs
 ```
 
-Abra `http://localhost:5173`, `http://localhost:5173/acougue.html` e `http://localhost:5173/monitor.html` em abas do mesmo navegador.
+Abra `http://localhost:5173`, `http://localhost:5173/acougue.html`, `http://localhost:5173/monitor.html` e
+`http://localhost:5173/parceiro.html` em abas do mesmo navegador (com `?fonte=local` enquanto o Supabase estiver pausado).
 
 ## Ligar o Supabase (para usar em aparelhos diferentes)
 
 **Já está ligado** ao projeto `CortaE` desde 2026-11-20. Os passos abaixo servem só para refazer num projeto novo.
+
+**Pendente (versão 0.2.0):** o `schema.sql` ganhou a coluna `pedidos.extras` e as tabelas `esgotados` e `parceiros`.
+Ao religar o projeto, rodar o `supabase/schema.sql` de novo; ele pode ser repetido sem perder dados. Sem isso, o app no
+Supabase falha nas partes novas.
 
 1. Criar um projeto no Supabase (plano Free).
 2. No **SQL Editor**, rodar o arquivo `supabase/schema.sql` inteiro.

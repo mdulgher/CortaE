@@ -14,7 +14,7 @@ const tipos = {
   '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
 };
 // Só o que o site publica; documentação, ferramentas e pastas ocultas respondem 404.
-const permitido = (rel) => /^(index\.html|acougue\.html|monitor\.html|(css|js|img)\/[\w.-]+)$/.test(rel);
+const permitido = (rel) => /^(index\.html|acougue\.html|monitor\.html|parceiro\.html|(css|js|img)\/[\w.-]+)$/.test(rel);
 
 createServer(async (req, res) => {
   let rel = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html';

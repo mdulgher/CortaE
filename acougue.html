@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Figtree:wght@400;500;600;650;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/painel.css">
+  <link rel="stylesheet" href="css/blueprint.css">
 </head>
 <body>
   <header class="barra-topo">
@@ -26,6 +27,7 @@
       </select>
     </label>
     <div class="topo-acoes">
+      <a class="btn btn-sec" href="parceiro.html" target="_blank" rel="noopener">🤝 Seja parceiro</a>
       <button class="btn btn-ama" id="btn-som"><span data-ic="sino"></span> Ativar som</button>
       <button class="icone-btn" data-tema-btn></button>
       <button class="icone-btn" id="btn-zerar" title="Zerar demonstração" aria-label="Zerar demonstração"><span data-ic="reiniciar"></span></button>
@@ -35,10 +37,17 @@
     <div class="segmento">
       <button class="aba-p ativa" data-aba="pedidos"><span data-ic="recibo"></span> Pedidos <span class="cont" id="cont-novos"></span></button>
       <button class="aba-p" data-aba="assinaturas"><span data-ic="ciclo"></span> Assinaturas <span class="cont" id="cont-assin"></span></button>
+      <button class="aba-p" data-aba="estoque"><span data-ic="caixa"></span> Estoque <span class="cont" id="cont-esg"></span></button>
+      <button class="aba-p" data-aba="repasse"><span data-ic="recibo"></span> Repasse</button>
+      <button class="aba-p" data-aba="documentos"><span data-ic="check"></span> Documentos <span class="cont" id="cont-docs"></span></button>
     </div>
   </nav>
-  <main id="quadro" class="quadro"></main>
-  <section id="assinaturas" class="assin-lista oculto"></section>
+  <div id="alertas" class="alertas-painel"></div>
+  <main id="quadro" class="quadro" data-secao="pedidos"></main>
+  <section id="assinaturas" class="assin-lista oculto" data-secao="assinaturas"></section>
+  <section id="estoque" class="assin-lista oculto" data-secao="estoque"></section>
+  <section id="repasse" class="assin-lista oculto" data-secao="repasse"></section>
+  <section id="documentos" class="assin-lista oculto" data-secao="documentos"></section>
   <script type="module" src="js/acougue.js"></script>
 </body>
 </html>
