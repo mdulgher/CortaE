@@ -1,7 +1,7 @@
 // Implementação local: localStorage + BroadcastChannel.
 // Sincroniza só entre abas do MESMO navegador. Serve para ensaiar sem internet e sem Supabase.
-import { novoId } from './db.js?v=0.3.1';
-import { agoraISO } from './relogio.js?v=0.3.1';
+import { novoId } from './db.js?v=0.3.2';
+import { agoraISO } from './relogio.js?v=0.3.2';
 
 const CHAVES = {
   pedidos: 'cortae.pedidos', assinaturas: 'cortae.assinaturas',

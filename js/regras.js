@@ -1,7 +1,7 @@
 // Regras do serviço usadas pelas três telas (pontos críticos do blueprint da Karla).
-import { CONFIG } from './config.js?v=0.3.1';
-import { agora } from './relogio.js?v=0.3.1';
-import { esc } from './ui.js?v=0.3.1';
+import { CONFIG } from './config.js?v=0.3.2';
+import { agora } from './relogio.js?v=0.3.2';
+import { esc } from './ui.js?v=0.3.2';
 
 // Prazo máximo de aceite: segundos que faltam (negativo = estourou).
 export function segundosParaAceite(p) {

@@ -1,6 +1,6 @@
 // Utilitários de tela compartilhados pelas três páginas.
-import { ic } from './icones.js?v=0.3.1';
-import { agora } from './relogio.js?v=0.3.1';
+import { ic } from './icones.js?v=0.3.2';
+import { agora } from './relogio.js?v=0.3.2';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

@@ -1,12 +1,12 @@
 // Monitor da TV: mostra ao vivo o pedido que está andando, o motoboy no mapa e os números do dia.
-import { db } from './db.js?v=0.3.1';
-import { STATUS, ACOUGUES, acougue, plano, prazo, produto, notaAcougue, temperaturaEntrega } from './catalogo.js?v=0.3.1';
-import { aceiteAtrasado, estornoDe, estrelas } from './regras.js?v=0.3.1';
-import { esc, dinheiro, hora, iniciarTema, vigiarErros, toast, manterTelaAcesa } from './ui.js?v=0.3.1';
-import { htmlTimeline } from './timeline.js?v=0.3.1';
-import { MapaEntrega, progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js?v=0.3.1';
-import { ic, pintarIcones } from './icones.js?v=0.3.1';
-import { agora } from './relogio.js?v=0.3.1';
+import { db } from './db.js?v=0.3.2';
+import { STATUS, ACOUGUES, acougue, plano, prazo, produto, notaAcougue, temperaturaEntrega } from './catalogo.js?v=0.3.2';
+import { aceiteAtrasado, estornoDe, estrelas } from './regras.js?v=0.3.2';
+import { esc, dinheiro, hora, iniciarTema, vigiarErros, toast, manterTelaAcesa } from './ui.js?v=0.3.2';
+import { htmlTimeline } from './timeline.js?v=0.3.2';
+import { MapaEntrega, progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js?v=0.3.2';
+import { ic, pintarIcones } from './icones.js?v=0.3.2';
+import { agora } from './relogio.js?v=0.3.2';
 
 vigiarErros();
 iniciarTema();
@@ -39,8 +39,10 @@ const recemEntregue = (p) => p.status === 'entregue' && p.entregue_em && agora()
 // No mesmo grupo, ganha o que mudou por último.
 const peso = (p) => (p.status === 'saiu' || recemEntregue(p) ? 2 : ATIVOS.includes(p.status) ? 1 : 0);
 
+// Sem pedido em andamento, a TV mostra a tela de espera em vez da última entrega (pedido do Marcos, 2026-11-26).
 function destaque() {
-  const lista = pedidos.slice().sort((a, b) => peso(b) - peso(a) || (ultimaMudanca(a) < ultimaMudanca(b) ? 1 : -1));
+  const lista = pedidos.filter((p) => peso(p) > 0)
+    .sort((a, b) => peso(b) - peso(a) || (ultimaMudanca(a) < ultimaMudanca(b) ? 1 : -1));
   return lista[0] || null;
 }
 
@@ -84,7 +86,11 @@ function renderDestaque() {
   destaqueId = p?.id ?? null;
   mapa.mostrar(p);
   if (!p) {
-    $dest.innerHTML = `<div class="dest-vazio"><span class="grande">📱</span>Aguardando o primeiro pedido…<small>Faça um pedido pelo app no celular</small></div>`;
+    const ult = pedidos.slice().sort((a, b) => (ultimaMudanca(a) < ultimaMudanca(b) ? 1 : -1))[0];
+    $dest.innerHTML = ult
+      ? `<div class="dest-vazio"><span class="grande">🔥</span>Aguardando o próximo pedido…
+          <small>Último: #${ult.numero} · ${esc(ult.cliente_nome)} · ${STATUS[ult.status].curto.toLowerCase()} às ${hora(ultimaMudanca(ult))}</small></div>`
+      : `<div class="dest-vazio"><span class="grande">📱</span>Aguardando o primeiro pedido…<small>Faça um pedido pelo app no celular</small></div>`;
     return;
   }
   const a = acougue(p.acougue_id);

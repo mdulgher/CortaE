@@ -1,20 +1,20 @@
 // Painel do açougue: recebe o pedido, prepara e despacha. Depois de "saiu", o motoboy anda sozinho.
 // Também: prazo de aceite, reclamações com estorno, estoque, repasse e documentos (blueprints da Karla).
-import { db } from './db.js?v=0.3.1';
+import { db } from './db.js?v=0.3.2';
 import {
   ACOUGUES, STATUS, CATEGORIAS, PRODUTOS, REQUISITOS, TEMPERATURAS, EMPRESA,
   acougue, plano, frequencia, planoParceiro, notaAcougue, DIAS_SEMANA, prazo, precoAssinatura,
-} from './catalogo.js?v=0.3.1';
+} from './catalogo.js?v=0.3.2';
 import {
   esc, dinheiro, hora, tempoDesde, iniciarTema, toast, confirmar, vigiarErros,
   liberarSom, somLiberado, tocarAviso, manterTelaAcesa,
-} from './ui.js?v=0.3.1';
-import { progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js?v=0.3.1';
+} from './ui.js?v=0.3.2';
+import { progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js?v=0.3.2';
 import {
   segundosParaAceite, aceiteAtrasado, mmss, estornoDe, htmlAvaliacao, dataDaqui,
-} from './regras.js?v=0.3.1';
-import { ic, pintarIcones } from './icones.js?v=0.3.1';
-import { agora } from './relogio.js?v=0.3.1';
+} from './regras.js?v=0.3.2';
+import { ic, pintarIcones } from './icones.js?v=0.3.2';
+import { agora } from './relogio.js?v=0.3.2';
 
 vigiarErros();
 iniciarTema();

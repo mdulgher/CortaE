@@ -1,6 +1,6 @@
 // Implementação Supabase: mesma interface do db-local.js, com tempo real entre aparelhos.
 // Schema em supabase/schema.sql. Sem login: a demo usa a chave pública e tabelas abertas (decisão do dono).
-import { agoraISO } from './relogio.js?v=0.3.1';
+import { agoraISO } from './relogio.js?v=0.3.2';
 
 const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
 // Rede de segurança: recarrega a cada 5 s enquanto a tela está visível. Se o tempo real cair sem avisar

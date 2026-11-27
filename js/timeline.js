@@ -1,6 +1,6 @@
 // Linha do tempo do pedido, usada no celular e na TV.
-import { STATUS, ETAPAS } from './catalogo.js?v=0.3.1';
-import { hora } from './ui.js?v=0.3.1';
+import { STATUS, ETAPAS } from './catalogo.js?v=0.3.2';
+import { hora } from './ui.js?v=0.3.2';
 
 export function htmlTimeline(p) {
   const quando = (st) => (p.historico || []).find((h) => h.status === st)?.em;

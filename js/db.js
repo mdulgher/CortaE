@@ -19,16 +19,16 @@
 //            diferencaRelogio() (ms entre a hora do servidor e a deste aparelho; 0 no modo local)
 // ouvir(fn) também é chamado com { tipo: 'sync' } quando a tela volta a ficar visível ou a rede volta,
 // para a tela recarregar o que pode ter perdido enquanto o aparelho dormia.
-import { CONFIG, DATA_SOURCE } from './config.js?v=0.3.1';
-import { ajustarRelogio } from './relogio.js?v=0.3.1';
+import { CONFIG, DATA_SOURCE } from './config.js?v=0.3.2';
+import { ajustarRelogio } from './relogio.js?v=0.3.2';
 
 let promessa;
 
 export function db() {
   if (!promessa) {
     promessa = (DATA_SOURCE === 'supabase'
-      ? import('./db-supabase.js?v=0.3.1').then((m) => m.criar(CONFIG))
-      : import('./db-local.js?v=0.3.1').then((m) => m.criar()))
+      ? import('./db-supabase.js?v=0.3.2').then((m) => m.criar(CONFIG))
+      : import('./db-local.js?v=0.3.2').then((m) => m.criar()))
       .then((api) => {
         // Acerta o relógio em paralelo, sem atrasar a primeira tela. Se falhar (rede caiu na abertura),
         // vale a hora do aparelho e tenta de novo quando a rede voltar ou a tela reaparecer.

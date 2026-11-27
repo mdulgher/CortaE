@@ -1,8 +1,8 @@
 // Simulação da entrega: o motoboy percorre a rota do açougue até o cliente em CONFIG.ENTREGA_SEGUNDOS.
 // Qualquer tela aberta (cliente, açougue ou TV) marca "entregue" quando o tempo acaba.
-import { CONFIG } from './config.js?v=0.3.1';
-import { ACOUGUES, CLIENTE_PADRAO, acougue } from './catalogo.js?v=0.3.1';
-import { agora } from './relogio.js?v=0.3.1';
+import { CONFIG } from './config.js?v=0.3.2';
+import { ACOUGUES, CLIENTE_PADRAO, acougue } from './catalogo.js?v=0.3.2';
+import { agora } from './relogio.js?v=0.3.2';
 
 export function progressoEntrega(p) {
   if (p.status === 'entregue') return 1;
