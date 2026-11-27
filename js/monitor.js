@@ -1,12 +1,12 @@
 // Monitor da TV: mostra ao vivo o pedido que está andando, o motoboy no mapa e os números do dia.
-import { db } from './db.js';
-import { STATUS, ACOUGUES, acougue, plano, prazo, produto, notaAcougue, temperaturaEntrega } from './catalogo.js';
-import { aceiteAtrasado, estornoDe, estrelas } from './regras.js';
-import { esc, dinheiro, hora, iniciarTema, vigiarErros, toast, manterTelaAcesa } from './ui.js';
-import { htmlTimeline } from './timeline.js';
-import { MapaEntrega, progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js';
-import { ic, pintarIcones } from './icones.js';
-import { agora } from './relogio.js';
+import { db } from './db.js?v=0.3.1';
+import { STATUS, ACOUGUES, acougue, plano, prazo, produto, notaAcougue, temperaturaEntrega } from './catalogo.js?v=0.3.1';
+import { aceiteAtrasado, estornoDe, estrelas } from './regras.js?v=0.3.1';
+import { esc, dinheiro, hora, iniciarTema, vigiarErros, toast, manterTelaAcesa } from './ui.js?v=0.3.1';
+import { htmlTimeline } from './timeline.js?v=0.3.1';
+import { MapaEntrega, progressoEntrega, segundosRestantes, concluirEntregasVencidas } from './entrega.js?v=0.3.1';
+import { ic, pintarIcones } from './icones.js?v=0.3.1';
+import { agora } from './relogio.js?v=0.3.1';
 
 vigiarErros();
 iniciarTema();

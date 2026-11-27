@@ -1,11 +1,11 @@
 // "Seja parceiro": cadastro do açougue em 6 etapas (blueprint 4.1 e requisitos 4.2 do plano de negócio).
 // Tudo encenado: nenhum documento é enviado de verdade e os dados de exemplo são fictícios.
-import { db } from './db.js';
-import { BASE, CATEGORIAS, REQUISITOS, PLANOS_PARCEIRO, ETAPAS_PARCEIRO, TEMPERATURAS, EMPRESA, planoParceiro } from './catalogo.js';
-import { CONFIG } from './config.js';
-import { esc, dinheiro, iniciarTema, toast, vigiarErros } from './ui.js';
-import { dataDaqui } from './regras.js';
-import { ic, pintarIcones } from './icones.js';
+import { db } from './db.js?v=0.3.1';
+import { BASE, CATEGORIAS, REQUISITOS, PLANOS_PARCEIRO, ETAPAS_PARCEIRO, TEMPERATURAS, EMPRESA, planoParceiro } from './catalogo.js?v=0.3.1';
+import { CONFIG } from './config.js?v=0.3.1';
+import { esc, dinheiro, iniciarTema, toast, vigiarErros } from './ui.js?v=0.3.1';
+import { dataDaqui } from './regras.js?v=0.3.1';
+import { ic, pintarIcones } from './icones.js?v=0.3.1';
 
 vigiarErros();
 iniciarTema();

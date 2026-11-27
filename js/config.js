@@ -9,7 +9,7 @@ export const CONFIG = {
   ENTREGA_SEGUNDOS: 30,   // quanto tempo o motoboy leva no mapa
   ACEITE_SEGUNDOS: 60,    // prazo máximo para o açougue aceitar; depois disso a equipe CortaÊ é alertada
   ENTREGA_MAX_MIN: 45,    // tempo máximo de entrega prometido ao cliente (padrão próprio do CortaÊ)
-  RELEASE: '0.3.0',
+  RELEASE: '0.3.1',
 };
 
 // ?fonte=local força o modo local (só funciona entre abas do mesmo navegador).

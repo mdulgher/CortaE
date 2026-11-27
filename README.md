@@ -113,6 +113,9 @@ O Supabase Free só deixa restaurar pelo painel um projeto pausado há menos de 
   Por garantia, no iPhone: Ajustes → Tela e Brilho → Bloqueio Automático → Nunca; no Windows da TV e do painel, tela e suspensão em "Nunca".
 - Se o celular bloquear ou a rede piscar, as telas se acertam sozinhas em até 5 segundos (não precisa recarregar).
 - Testar a internet do local: as três telas precisam dela (Supabase e mapa).
+- **Antes de publicar uma mudança, subir a versão:** `node ferramentas/versao.mjs 0.3.2` (troca o `RELEASE` e o `?v=` de
+  todos os arquivos). Sem isso, o Safari pode misturar arquivo novo com velho do cache e o app fica em branco (aconteceu em
+  2026-11-26 na 0.3.0). Se mesmo assim a tela não desenhar em 8 s, o app mostra um botão "Recarregar".
 - **Depois de publicar uma mudança**, o navegador pode guardar a versão antiga por até **10 minutos** (cache do GitHub Pages).
   Não publicar nada na última hora antes da apresentação; se publicar, esperar 10 minutos e recarregar as três telas.
 

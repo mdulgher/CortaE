@@ -1,21 +1,21 @@
 // App do cliente (celular): catálogo, carrinho, pedido, acompanhamento e assinatura.
-import { db, novoId } from './db.js';
-import { CONFIG } from './config.js';
+import { db, novoId } from './db.js?v=0.3.1';
+import { CONFIG } from './config.js?v=0.3.1';
 import {
   ACOUGUES, CATEGORIAS, PRODUTOS, PLANOS, FREQUENCIAS, DIAS_SEMANA, STATUS, ETAPAS, CLIENTE_PADRAO,
   EMPRESA, acougue, produto, plano, frequencia, notaAcougue, temperaturaEntrega, substituto,
   PRAZOS, prazo, precoAssinatura, calcularChurrasco,
-} from './catalogo.js';
+} from './catalogo.js?v=0.3.1';
 import {
   segundosParaAceite, aceiteAtrasado, mmss, estornoDe, minutosDeEntrega, MOTIVOS, estrelas, htmlAvaliacao,
-} from './regras.js';
+} from './regras.js?v=0.3.1';
 import {
   esc, dinheiro, hora, iniciarTema, atualizarBotoesTema, toast, confirmar, vigiarErros, manterTelaAcesa,
-} from './ui.js';
-import { htmlTimeline } from './timeline.js';
-import { MapaEntrega, segundosRestantes, progressoEntrega, concluirEntregasVencidas } from './entrega.js';
-import { ic, pintarIcones } from './icones.js';
-import { agora } from './relogio.js';
+} from './ui.js?v=0.3.1';
+import { htmlTimeline } from './timeline.js?v=0.3.1';
+import { MapaEntrega, segundosRestantes, progressoEntrega, concluirEntregasVencidas } from './entrega.js?v=0.3.1';
+import { ic, pintarIcones } from './icones.js?v=0.3.1';
+import { agora } from './relogio.js?v=0.3.1';
 
 vigiarErros();
 iniciarTema();
