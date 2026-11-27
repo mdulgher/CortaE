@@ -35,8 +35,14 @@ create table if not exists public.assinaturas (
   dia_semana       integer not null,
   acougue_id       text not null,
   status           text not null default 'ativa' check (status in ('ativa','pausada','cancelada')),
-  proxima_entrega  date
+  proxima_entrega  date,
+  prazo            text not null default 'mensal' check (prazo in ('mensal','semestral','anual')),
+  extras           jsonb not null default '{}'   -- período atual, renovações e kit de presente
 );
+
+alter table public.assinaturas add column if not exists prazo text not null default 'mensal'
+  check (prazo in ('mensal','semestral','anual'));
+alter table public.assinaturas add column if not exists extras jsonb not null default '{}';
 
 -- Cortes que o açougue marcou como esgotados no painel.
 create table if not exists public.esgotados (

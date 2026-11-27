@@ -8,7 +8,9 @@
 // Esgotado:   { produto_id, acougue_id, criado_em }  (corte que o açougue marcou como sem estoque)
 // Parceiro:   { id, criado_em, etapa (1..6), status ('cadastro'|'validacao'|'ativo'), dados{} }  (Seja parceiro)
 // Assinatura: { id, criado_em, cliente_id, cliente_nome, endereco, plano_id, frequencia, dia_semana,
-//               acougue_id, status ('ativa'|'pausada'|'cancelada'), proxima_entrega }
+//               acougue_id, status ('ativa'|'pausada'|'cancelada'), proxima_entrega,
+//               prazo ('mensal'|'semestral'|'anual'), extras{} }
+//             extras: { periodo_inicio, renovacoes, brinde{nome, icone, status ('pendente'|'entregue'), em, entregue_em} }
 //
 // Interface: listarPedidos, obterPedido, criarPedido, mudarStatus(id, novo, deStatus?),
 //            atualizarExtras(id, campos), listarAssinaturas, criarAssinatura, atualizarAssinatura(id, campos),

@@ -1,6 +1,6 @@
 // Monitor da TV: mostra ao vivo o pedido que está andando, o motoboy no mapa e os números do dia.
 import { db } from './db.js';
-import { STATUS, ACOUGUES, acougue, plano, produto, notaAcougue, temperaturaEntrega } from './catalogo.js';
+import { STATUS, ACOUGUES, acougue, plano, prazo, produto, notaAcougue, temperaturaEntrega } from './catalogo.js';
 import { aceiteAtrasado, estornoDe, estrelas } from './regras.js';
 import { esc, dinheiro, hora, iniciarTema, vigiarErros, toast, manterTelaAcesa } from './ui.js';
 import { htmlTimeline } from './timeline.js';
@@ -178,11 +178,12 @@ async function recarregar() {
       else if (st !== 'ativo' && c.status === 'ativo') anunciar('✅', 'Novo parceiro ativo!', `${c.dados?.nome || 'Açougue'} passou na validação e já pode vender`);
     }
     for (const s of assinaturas) {
-      if (!assinConhecidas.has(s.id)) anunciar('🔄', 'Nova assinatura!', `${s.cliente_nome} assinou o plano ${plano(s.plano_id)?.nome}`);
+      if (!assinConhecidas.has(s.id)) anunciar('🔄', 'Nova assinatura!', `${s.cliente_nome} assinou o plano ${plano(s.plano_id)?.nome} ${prazo(s.prazo).nome.toLowerCase()}`);
+      else if ((s.extras?.renovacoes || 0) > assinConhecidas.get(s.id)) anunciar('🎁', 'Assinatura renovada!', `${s.cliente_nome} renovou e ganhou ${s.extras.brinde?.nome} na próxima entrega`);
     }
   }
   conhecidos = new Set(pedidos.map((p) => p.id));
-  assinConhecidas = new Set(assinaturas.map((s) => s.id));
+  assinConhecidas = new Map(assinaturas.map((s) => [s.id, s.extras?.renovacoes || 0]));
   return true;
 }
 

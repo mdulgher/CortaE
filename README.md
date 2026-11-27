@@ -37,6 +37,19 @@ Blueprint do pedido, com os pontos críticos de cada etapa:
 Blueprint do cadastro do parceiro (`parceiro.html`): inscrição, envio de documentos, validação (com uma pendência a
 corrigir), contrato com escolha do plano e treinamento, vitrine e loja ativa. O açougue novo aparece na lista do app.
 
+### Pedidos da Karla de 2026-11-26 (versão 0.3.0)
+
+- **Prazo da assinatura com desconto:** mensal (preço cheio), semestral (5% mais barato) e anual (10% mais barato).
+  Preço por entrega = preço do plano × (1 − desconto). Regras em `PRAZOS` (`js/catalogo.js`).
+- **Promoção: kit de presente ao renovar**, que cresce com o prazo: mensal ganha pão de alho + sal grosso,
+  semestral ganha o Kit Fit e anual ganha o Kit Churrasco. O presente é o do prazo que terminou e vai **junto com a
+  1ª entrega do novo período**. Na renovação o cliente pode mudar o prazo. Na demo, "Simular renovação" (tela da
+  assinatura) faz a renovação na hora; o painel mostra "Levar Kit…" e o botão "Presente entregue"; a TV anuncia.
+- **Calculadora de churrasco** (`#/churrasco`, atalho no início): adultos e crianças, açougue, e devolve carne
+  (~400 g por adulto e 200 g por criança: 60% bovina, 20% linguiça, 20% frango), carvão (1 kg por kg de carne),
+  sal grosso, pão de alho e farofa, já em embalagens e preço. Corte esgotado vira o substituto. "Pôr tudo no
+  carrinho" monta o pedido. Regras em `CHURRASCO` e `calcularChurrasco` (`js/catalogo.js`).
+
 Comissões e mensalidades usam os planos do iFood citados no PDF (Básico 12%, Entrega 23%, mais 3,2% no pagamento online).
 São só referência: o valor final é decisão do grupo.
 
@@ -68,9 +81,8 @@ Abra `http://localhost:5173`, `http://localhost:5173/acougue.html`, `http://loca
 
 **Já está ligado** ao projeto `CortaE` desde 2026-11-20. Os passos abaixo servem só para refazer num projeto novo.
 
-**Pendente (versão 0.2.0):** o `schema.sql` ganhou a coluna `pedidos.extras` e as tabelas `esgotados` e `parceiros`.
-Ao religar o projeto, rodar o `supabase/schema.sql` de novo; ele pode ser repetido sem perder dados. Sem isso, o app no
-Supabase falha nas partes novas.
+O `supabase/schema.sql` pode ser repetido sem perder dados. Versões 0.2.0 (`pedidos.extras`, `esgotados`,
+`parceiros`) e 0.3.0 (`assinaturas.prazo` e `assinaturas.extras`) já aplicadas no projeto `CortaE` em 2026-11-26.
 
 1. Criar um projeto no Supabase (plano Free).
 2. No **SQL Editor**, rodar o arquivo `supabase/schema.sql` inteiro.

@@ -154,3 +154,49 @@ small.sugestao { border-style: solid; border-color: var(--linha); background: va
 .tv .info-lista { display: grid; gap: .45rem; }
 .tv .info-lista:empty { display: none; }
 .ult .marcas { display: flex; gap: .4rem; flex-wrap: wrap; font-size: .85rem; font-weight: 650; }
+
+/* ---------- Prazo da assinatura, promoção e kit de presente (pedido da Karla, 2026-11-26) ---------- */
+.promo-assin, .presente {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; padding: 14px 16px;
+  border-radius: 20px; background: var(--mostarda-suave); border: 1px dashed var(--mostarda);
+}
+.promo-assin .ico, .presente .ico { width: 44px; height: 44px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 1.4rem; }
+.promo-assin small, .presente small { display: block; color: var(--muted); font-size: .84rem; margin-top: 2px; }
+.presente { background: var(--papel-2); border-color: var(--linha); border-style: solid; }
+.presente-pendente { background: var(--verde-suave); border-color: var(--verde); }
+.prazos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.prazo {
+  position: relative; display: grid; gap: 3px; justify-items: center; text-align: center; padding: 16px 6px 12px;
+  border-radius: 18px; border: 1px solid var(--linha); background: var(--surface); color: var(--text);
+  transition: border-color .2s, box-shadow .2s, background-color .2s;
+}
+.prazo.ativo { border-color: var(--mostarda); background: var(--mostarda-suave); box-shadow: 0 0 0 3px rgba(242, 181, 58, .2); }
+.prazo strong { font-weight: 650; font-size: 1rem; }
+.prazo .desc { font-family: var(--f-display); font-weight: 700; font-size: 1.15rem; color: var(--verde); }
+.prazo .desc.cheio { color: var(--muted); font-size: .9rem; font-family: var(--f-corpo); font-weight: 600; }
+.prazo small { color: var(--muted); font-size: .76rem; }
+.prazo .ganha { font-size: .74rem; font-weight: 600; line-height: 1.25; margin-top: 4px; }
+.prazo .fita { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--vinho); color: #fff; font-size: .62rem; font-weight: 650; letter-spacing: .03em; padding: 2px 8px; border-radius: 999px; }
+.renovar { display: grid; gap: 12px; }
+.assin-ativa s, .resumo s { color: var(--muted); font-weight: 500; }
+.tabela .brinde { display: inline-flex; gap: 6px; align-items: center; margin-top: 4px; }
+
+/* ---------- Calculadora de churrasco ---------- */
+.calc-atalho { margin-top: -4px; }
+.calc-pessoas { display: grid; gap: 12px; }
+.contador { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.contador small { display: block; color: var(--muted); font-size: .82rem; }
+.contador .qtd span { min-width: 30px; font-size: 1.1rem; }
+.calc-result { display: grid; gap: 10px; }
+.calc-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px dashed var(--linha); padding-bottom: 10px; }
+.calc-topo span { color: var(--muted); }
+.calc-topo b { font-family: var(--f-display); font-size: 1.3rem; }
+.calc-linha { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.calc-linha .prod-ico { width: 44px; height: 44px; border-radius: 12px; font-size: 1.3rem; }
+.calc-linha small { display: block; color: var(--muted); font-size: .8rem; }
+.calc-linha .calc-troca { color: var(--perigo); }
+.calc-linha .preco { font-weight: 650; font-variant-numeric: tabular-nums; }
+.calc-total { display: flex; justify-content: space-between; font-family: var(--f-display); font-size: 1.2rem; font-weight: 600; border-top: 1px dashed var(--linha); padding-top: 10px; }
+.dica-calc { margin: 0; font-size: .86rem; color: var(--muted); text-align: center; }
+:root[data-theme="dark"] .prazo .desc:not(.cheio) { color: #7ad3a0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .prazo .desc:not(.cheio) { color: #7ad3a0; } }

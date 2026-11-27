@@ -3,7 +3,7 @@
 import { db } from './db.js';
 import {
   ACOUGUES, STATUS, CATEGORIAS, PRODUTOS, REQUISITOS, TEMPERATURAS, EMPRESA,
-  acougue, plano, frequencia, planoParceiro, notaAcougue, DIAS_SEMANA,
+  acougue, plano, frequencia, planoParceiro, notaAcougue, DIAS_SEMANA, prazo, precoAssinatura,
 } from './catalogo.js';
 import {
   esc, dinheiro, hora, tempoDesde, iniciarTema, toast, confirmar, vigiarErros,
@@ -133,16 +133,24 @@ function renderAssinaturas() {
   document.getElementById('cont-assin').textContent = ativas.length || '';
   $assin.innerHTML = ativas.length ? `
     <table class="tabela">
-      <thead><tr><th>Cliente</th><th>Plano</th><th>Frequência</th><th>Próxima entrega</th><th>Açougue</th><th>Status</th></tr></thead>
-      <tbody>${ativas.map((s) => `
+      <thead><tr><th>Cliente</th><th>Plano</th><th>Prazo</th><th>Frequência</th><th>Próxima entrega</th><th>Açougue</th><th>Status</th></tr></thead>
+      <tbody>${ativas.map((s) => {
+        const pz = prazo(s.prazo);
+        const b = s.extras?.brinde;
+        return `
         <tr>
           <td>${esc(s.cliente_nome)}<br><small>${esc(s.endereco)}</small></td>
-          <td>${plano(s.plano_id)?.icone} ${esc(plano(s.plano_id)?.nome)} · ${dinheiro(plano(s.plano_id)?.preco)}</td>
+          <td>${plano(s.plano_id)?.icone} ${esc(plano(s.plano_id)?.nome)} · ${dinheiro(precoAssinatura(s.plano_id, s.prazo))}</td>
+          <td>${esc(pz.nome)}${pz.desconto ? ` <small>(−${Math.round(pz.desconto * 100)}%)</small>` : ''}${s.extras?.renovacoes ? `<br><small>${s.extras.renovacoes}ª renovação</small>` : ''}</td>
           <td>${esc(frequencia(s.frequencia)?.nome)} · ${DIAS_SEMANA[s.dia_semana]}</td>
-          <td>${s.status === 'pausada' ? '—' : (s.proxima_entrega || '').split('-').reverse().join('/')}</td>
+          <td>${s.status === 'pausada' ? '—' : (s.proxima_entrega || '').split('-').reverse().join('/')}
+            ${b?.status === 'pendente' ? `<br><span class="brinde selo selo-preparando">🎁 Levar ${esc(b.nome)}</span>
+              <br><button class="btn btn-ama" data-acao="brinde-entregue" data-id="${s.id}" style="margin-top:6px;padding:6px 10px;font-size:.82rem">Presente entregue</button>` : ''}
+            ${b?.status === 'entregue' ? `<br><small>🎁 ${esc(b.nome)} entregue ✓</small>` : ''}</td>
           <td>${esc(acougue(s.acougue_id)?.nome)}</td>
           <td><span class="selo ${s.status === 'ativa' ? 'selo-entregue' : 'selo-recebido'}">${s.status === 'ativa' ? 'Ativa' : 'Pausada'}</span></td>
-        </tr>`).join('')}</tbody>
+        </tr>`;
+      }).join('')}</tbody>
     </table>` : '<div class="coluna"><div class="vazio-col">Nenhuma assinatura ativa ainda</div></div>';
 }
 
@@ -356,6 +364,15 @@ document.addEventListener('click', async (e) => {
         estorno: { valor: p.total, motivo: p.extras.reclamacao.motivo, em },
         chat: [...(p.extras.chat || []), { de: 'cortae', texto: `Boa notícia: o ${acougue(p.acougue_id).nome} aprovou o estorno de ${dinheiro(p.total)}. O valor volta pelo mesmo meio de pagamento.`, em }],
       });
+    }
+    if (acao === 'brinde-entregue') {
+      const s = assinaturas.find((x) => x.id === id);
+      if (s?.extras?.brinde) {
+        await api.atualizarAssinatura(id, {
+          extras: { ...s.extras, brinde: { ...s.extras.brinde, status: 'entregue', entregue_em: new Date(agora()).toISOString() } },
+        });
+        toast(`Presente ${s.extras.brinde.nome} entregue`, 'ok');
+      }
     }
     if (acao === 'esgotar') {
       await api.marcarEsgotado(id, el.dataset.loja, !esgotados.has(id));

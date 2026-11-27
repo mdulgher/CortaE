@@ -4,6 +4,7 @@ import { CONFIG } from './config.js';
 import {
   ACOUGUES, CATEGORIAS, PRODUTOS, PLANOS, FREQUENCIAS, DIAS_SEMANA, STATUS, ETAPAS, CLIENTE_PADRAO,
   EMPRESA, acougue, produto, plano, frequencia, notaAcougue, temperaturaEntrega, substituto,
+  PRAZOS, prazo, precoAssinatura, calcularChurrasco,
 } from './catalogo.js';
 import {
   segundosParaAceite, aceiteAtrasado, mmss, estornoDe, minutosDeEntrega, MOTIVOS, estrelas, htmlAvaliacao,
@@ -45,7 +46,8 @@ let slideTimer = null;
 const statusVistos = new Map();
 let pronto = false;          // dados carregados: antes disso, os botões que gravam esperam
 let enderecoDigitado = null; // o que a pessoa digitou no carrinho e ainda não enviou
-const escolha = { pagamento: 'pix', plano: 'churrasco', freq: 'quinzenal', dia: 6, acougue: 'boi' };
+const escolha = { pagamento: 'pix', plano: 'churrasco', prazo: 'anual', freq: 'quinzenal', dia: 6, acougue: 'boi' };
+const festa = { adultos: 10, criancas: 0, acougue: 'prime' }; // calculadora de churrasco
 
 const round2 = (v) => Math.round(v * 100) / 100;
 const totalItens = () => Object.values(carrinho.itens).reduce((s, q) => s + q, 0);
@@ -67,7 +69,7 @@ function rota() {
 const ABA_DE = {
   inicio: 'inicio', acougues: 'inicio', acougue: 'inicio', busca: 'inicio', carrinho: 'inicio',
   categorias: 'categorias', categoria: 'categorias', pedido: 'pedidos', pedidos: 'pedidos', ajuda: 'pedidos',
-  assinatura: 'assinatura', conta: 'conta', sobre: 'conta',
+  assinatura: 'assinatura', conta: 'conta', sobre: 'conta', churrasco: 'inicio',
 };
 
 function render() {
@@ -227,20 +229,21 @@ function inicio() {
             <img src="img/banner-carne.jpg" alt="">
           </div>
           <div class="slide slide-2">
-            <h3>Carne fresca <b>toda semana</b></h3>
-            <p>Assine e receba sem precisar lembrar.</p>
-            <a class="btn btn-pri" href="#/assinatura">Assinar</a>
+            <h3>Assine e <b>ganhe um kit</b></h3>
+            <p>Anual 10% mais barato e Kit Churrasco de presente ao renovar.</p>
+            <a class="btn btn-pri" href="#/assinatura">Ver promoção</a>
             <span class="arte">${ic('ciclo')}</span>
           </div>
           <div class="slide slide-3">
             <h3>Churrasco <b>de sábado</b></h3>
-            <p>Picanha, linguiça e carvão em um só pedido.</p>
-            <a class="btn btn-pri" href="#/categoria/bovinos">Ver cortes</a>
+            <p>Diga quantas pessoas vão e a gente calcula o pedido.</p>
+            <a class="btn btn-pri" href="#/churrasco">Calcular</a>
             <span class="arte">🔥</span>
           </div>
         </div>
         <div class="pontos" id="pontos"><i class="ativo"></i><i></i><i></i></div>
       </div>
+      <a class="conheca calc-atalho" href="#/churrasco"><span><b>🔥 Calculadora de churrasco</b><small>Quanto de carne, carvão e acompanhamentos pedir</small></span>${ic('seta')}</a>
       <section>
         <div class="secao-titulo"><h2>Açougues Parceiros</h2><a href="#/acougues">Ver todos →</a></div>
         <div class="lojas-h">
@@ -587,12 +590,122 @@ function proximaEntrega(dia) {
 }
 const dataBR = (ymd) => (ymd ? ymd.split('-').reverse().join('/') : '');
 
+// ---------- Calculadora de churrasco ----------
+// Quanto pedir para N pessoas; o que estiver esgotado no açougue vira o substituto sugerido.
+function contaChurrasco() {
+  const c = calcularChurrasco(festa.adultos, festa.criancas, festa.acougue);
+  c.linhas.forEach((l) => {
+    if (esgotados.has(l.produto.id)) {
+      const sub = substituto(l.produto.id, esgotados);
+      l.trocadoDe = l.produto.nome;
+      l.produto = sub && sub.acougue === festa.acougue ? sub : null;
+      l.subtotal = l.produto ? round2(l.emb * l.produto.preco) : 0;
+    }
+  });
+  c.total = round2(c.linhas.reduce((s, l) => s + l.subtotal, 0));
+  return c;
+}
+
+function telaChurrasco() {
+  const c = contaChurrasco();
+  const passo = (campo, rotulo, sub) => `
+    <div class="contador"><span><b>${rotulo}</b><small>${sub}</small></span>
+      <div class="qtd">
+        <button data-acao="festa" data-campo="${campo}" data-d="-1" aria-label="Menos ${rotulo.toLowerCase()}">${ic('menos')}</button>
+        <span>${festa[campo]}</span>
+        <button data-acao="festa" data-campo="${campo}" data-d="1" aria-label="Mais ${rotulo.toLowerCase()}">${ic('mais')}</button>
+      </div></div>`;
+  return {
+    topo: topoMini('Calculadora de churrasco'),
+    html: `
+      <div class="intro-assin">
+        <h2>🔥 Quanto pedir?</h2>
+        <p>Diga quantas pessoas vão. A gente calcula a carne e o resto: carvão, sal, pão de alho e farofa.</p>
+      </div>
+      <div class="cartao calc-pessoas">
+        ${passo('adultos', 'Adultos', '~400 g de carne cada')}
+        ${passo('criancas', 'Crianças', '~200 g de carne cada')}
+      </div>
+      <section><h2 class="passo"><i>🔪</i>Açougue</h2>
+        <div class="chips">${ACOUGUES.map((a) => `<button class="chip ${festa.acougue === a.id ? 'ativo' : ''}" data-acao="festa-acougue" data-id="${a.id}">${a.icone} ${esc(a.nome)}</button>`).join('')}</div></section>
+      ${c.pessoas ? `
+      <div class="cartao calc-result">
+        <div class="calc-topo"><span>${c.pessoas} ${c.pessoas === 1 ? 'pessoa' : 'pessoas'}</span><b>${c.kgCarne.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg de carne</b></div>
+        ${c.linhas.map((l) => `
+          <div class="calc-linha ${l.carne ? '' : 'calc-outro'}">
+            <span class="prod-ico cat-${l.produto?.cat || 'outros'}">${l.produto?.icone || '✖️'}</span>
+            <span><strong>${l.produto ? esc(l.produto.nome) : esc(l.trocadoDe)}</strong>
+              <small>${l.carne ? '' : `precisa de ${l.precisa} · `}${l.emb}× ${esc((l.produto?.peso || '').toLowerCase())}</small>
+              ${l.trocadoDe ? `<small class="calc-troca">${l.produto ? `No lugar de ${esc(l.trocadoDe)}, sem estoque hoje` : 'Sem estoque e sem substituto'}</small>` : ''}</span>
+            <span class="preco">${l.produto ? dinheiro(l.subtotal) : '—'}</span>
+          </div>`).join('')}
+        <div class="calc-total"><span>Total dos itens</span><span>${dinheiro(c.total)}</span></div>
+      </div>
+      <p class="dica-calc">💡 Bebidas não vendemos, mas contem uns 1,5 L por pessoa entre água, refrigerante e cerveja.</p>
+      <button class="btn btn-pri btn-bloco" data-acao="churrasco-carrinho">Pôr tudo no carrinho · ${dinheiro(c.total)}</button>`
+      : '<div class="vazio"><span class="grande">🍖</span>Coloque pelo menos uma pessoa.</div>'}`,
+  };
+}
+
+async function churrascoNoCarrinho() {
+  const c = contaChurrasco();
+  const itens = c.linhas.filter((l) => l.produto && l.emb);
+  if (!itens.length) return;
+  if (totalItens() > 0) {
+    const ok = await confirmar({
+      titulo: 'Substituir o carrinho?',
+      texto: `O carrinho atual será trocado pelos ${itens.length} itens do churrasco no ${acougue(festa.acougue).nome}.`,
+      ok: 'Substituir',
+    });
+    if (!ok) return;
+  }
+  carrinho = { acougue_id: festa.acougue, itens: {} };
+  itens.forEach((l) => { carrinho.itens[l.produto.id] = (carrinho.itens[l.produto.id] || 0) + l.emb; });
+  salvarCarrinho();
+  toast('Churrasco no carrinho 🔥', 'ok');
+  location.hash = '#/carrinho';
+}
+
+// Fim do período contratado: início do período atual + meses do prazo.
+function fimDoPeriodo(a) {
+  const d = new Date(a.extras?.periodo_inicio || a.criado_em);
+  d.setMonth(d.getMonth() + prazo(a.prazo).meses);
+  return d.toLocaleDateString('pt-BR');
+}
+const descontoTxt = (pz) => (pz.desconto ? `−${Math.round(pz.desconto * 100)}%` : 'preço cheio');
+
+function cartaoPresente(ativa) {
+  const b = ativa.extras?.brinde;
+  if (b?.status === 'pendente') {
+    return `<div class="presente presente-pendente"><span class="ico">🎁</span><span><b>Seu presente: ${esc(b.nome)}</b>
+      <small>Vai junto com a próxima entrega${ativa.status === 'pausada' ? ' (quando retomar)' : `, em ${dataBR(ativa.proxima_entrega)}`}.</small></span></div>`;
+  }
+  const pz = prazo(ativa.prazo);
+  const ultimo = b?.status === 'entregue' ? `<small>Último presente (${esc(b.nome)}) entregue ✓</small>` : '';
+  return `<div class="presente"><span class="ico">${pz.brinde.icone}</span><span><b>Renove em ${fimDoPeriodo(ativa)} e ganhe ${esc(pz.brinde.nome)}</b>
+    <small>O presente vai junto com a 1ª entrega do novo período.</small>${ultimo}</span></div>`;
+}
+
+function cartoesPrazo(sel, acao) {
+  return `<div class="prazos">${PRAZOS.map((pz) => `
+    <button class="prazo ${sel === pz.id ? 'ativo' : ''}" data-acao="${acao}" data-id="${pz.id}">
+      ${pz.destaque ? '<span class="fita">MAIS BARATO</span>' : ''}
+      <strong>${esc(pz.nome)}</strong>
+      <span class="desc ${pz.desconto ? '' : 'cheio'}">${descontoTxt(pz)}</span>
+      <small>${pz.meses === 1 ? '1 mês' : `${pz.meses} meses`}</small>
+      <span class="ganha">🎁 ${esc(pz.brinde.nome)}</span>
+    </button>`).join('')}</div>`;
+}
+
 function telaAssinatura() {
   const ativa = minhaAssinatura();
   if (ativa) {
     const pl = plano(ativa.plano_id);
+    const pz = prazo(ativa.prazo);
     const a = acougue(ativa.acougue_id);
     const pausada = ativa.status === 'pausada';
+    const valor = precoAssinatura(ativa.plano_id, ativa.prazo);
+    if (!escolha.renovarComo) escolha.renovarComo = pz.id;
     return {
       topo: topoMini('Assinatura'),
       html: `
@@ -601,41 +714,58 @@ function telaAssinatura() {
           <h2>Plano ${esc(pl.nome)}</h2>
           <span class="selo ${pausada ? 'selo-recebido' : 'selo-entregue'}" style="justify-self:start">${pausada ? 'Pausada' : `${ic('check', 'ic-mini')} Ativa`}</span>
           <div class="linha"><span>O que vem</span><span>${esc(pl.desc)}</span></div>
+          <div class="linha"><span>Prazo</span><span>${esc(pz.nome)} · ${descontoTxt(pz)}</span></div>
+          <div class="linha"><span>Período até</span><span>${fimDoPeriodo(ativa)}${ativa.extras?.renovacoes ? ` · ${ativa.extras.renovacoes}ª renovação` : ''}</span></div>
           <div class="linha"><span>Frequência</span><span>${esc(frequencia(ativa.frequencia).nome)} · ${DIAS_SEMANA[ativa.dia_semana]}</span></div>
           <div class="linha"><span>Açougue</span><span>${esc(a.nome)}</span></div>
           <div class="linha"><span>Próxima entrega</span><span>${pausada ? '—' : dataBR(ativa.proxima_entrega)}</span></div>
-          <div class="linha"><span>Valor por entrega</span><span>${dinheiro(pl.preco)}</span></div>
+          <div class="linha"><span>Valor por entrega</span><span>${pz.desconto ? `<s>${dinheiro(pl.preco)}</s> ` : ''}${dinheiro(valor)}</span></div>
         </div>
+        ${cartaoPresente(ativa)}
+        <section class="renovar"><h2 class="passo"><i>↻</i>Renovar ou mudar o prazo</h2>
+          ${cartoesPrazo(escolha.renovarComo, 'renovar-como')}
+          <button class="btn btn-pri btn-bloco" data-acao="renovar">Simular renovação · ${esc(prazo(escolha.renovarComo).nome)}</button>
+          <p class="aviso-demo">Na vida real a renovação acontece em ${fimDoPeriodo(ativa)}; aqui ela é simulada na hora.</p>
+        </section>
         <button class="btn btn-ama btn-bloco" data-acao="pausar">${pausada ? 'Retomar assinatura' : 'Pausar assinatura'}</button>
         <button class="btn btn-sec btn-bloco" data-acao="cancelar-assin">Cancelar assinatura</button>
         <p class="aviso-demo">Demonstração: a assinatura não gera cobrança.</p>`,
     };
   }
   const pl = plano(escolha.plano);
+  const pz = prazo(escolha.prazo);
   const fr = frequencia(escolha.freq);
   return {
     topo: topoMini('Assinatura'),
     html: `
       <div class="intro-assin">
         <h2>Carne fresca sem precisar lembrar</h2>
-        <p>Escolha o plano, a frequência e o dia. O açougue separa e entrega sozinho.</p>
+        <p>Escolha o plano, o prazo, a frequência e o dia. O açougue separa e entrega sozinho.</p>
+      </div>
+      <div class="promo-assin">
+        <span class="ico">🎁</span>
+        <span><b>Promoção: assine e ganhe um kit</b>
+          <small>Semestral 5% mais barato, anual 10%. Ao renovar, você ganha um kit de presente na 1ª entrega do novo período.</small></span>
       </div>
       <section><h2 class="passo"><i>1</i>Plano</h2>
         <div class="planos">${PLANOS.map((p) => `
           <button class="plano ${escolha.plano === p.id ? 'ativo' : ''}" data-acao="plano" data-id="${p.id}">
             ${p.destaque ? '<span class="fita">MAIS ESCOLHIDO</span>' : ''}
             <span class="ico">${p.icone}</span><span><strong>${esc(p.nome)}</strong><small>${esc(p.desc)}</small></span>
-            <span class="preco">${dinheiro(p.preco)}<small><br>por entrega</small></span></button>`).join('')}
+            <span class="preco">${dinheiro(precoAssinatura(p.id, escolha.prazo))}<small><br>por entrega</small></span></button>`).join('')}
         </div></section>
-      <section><h2 class="passo"><i>2</i>Frequência</h2>
+      <section><h2 class="passo"><i>2</i>Prazo</h2>${cartoesPrazo(escolha.prazo, 'prazo')}</section>
+      <section><h2 class="passo"><i>3</i>Frequência</h2>
         <div class="chips">${FREQUENCIAS.map((f) => `<button class="chip ${escolha.freq === f.id ? 'ativo' : ''}" data-acao="freq" data-id="${f.id}">${f.nome}</button>`).join('')}</div></section>
-      <section><h2 class="passo"><i>3</i>Dia da entrega</h2>
+      <section><h2 class="passo"><i>4</i>Dia da entrega</h2>
         <div class="chips">${[1, 2, 3, 4, 5, 6].map((d) => `<button class="chip ${escolha.dia === d ? 'ativo' : ''}" data-acao="dia" data-id="${d}">${DIAS_SEMANA[d].slice(0, 3)}</button>`).join('')}</div></section>
-      <section><h2 class="passo"><i>4</i>Açougue</h2>
+      <section><h2 class="passo"><i>5</i>Açougue</h2>
         <div class="chips">${ACOUGUES.map((a) => `<button class="chip ${escolha.acougue === a.id ? 'ativo' : ''}" data-acao="assin-acougue" data-id="${a.id}">${a.icone} ${esc(a.nome)}</button>`).join('')}</div></section>
       <div class="cartao resumo">
-        <div><span>Plano ${esc(pl.nome)}</span><span>${dinheiro(pl.preco)}</span></div>
+        <div><span>Plano ${esc(pl.nome)}</span><span>${pz.desconto ? `<s>${dinheiro(pl.preco)}</s> ` : ''}${dinheiro(precoAssinatura(pl.id, pz.id))}</span></div>
+        <div><span>Prazo ${esc(pz.nome.toLowerCase())}</span><span>${descontoTxt(pz)}</span></div>
         <div><span>Entrega</span><span>${fr.nome.toLowerCase()} · ${DIAS_SEMANA[escolha.dia].toLowerCase()}</span></div>
+        <div><span>Presente ao renovar</span><span>🎁 ${esc(pz.brinde.nome)}</span></div>
         <div class="total"><span>Primeira entrega</span><span>${dataBR(proximaEntrega(escolha.dia))}</span></div>
       </div>
       <button class="btn btn-pri btn-bloco" data-acao="assinar">Assinar plano ${esc(pl.nome)}</button>
@@ -804,7 +934,7 @@ function conta() {
 const VIEWS = {
   inicio, acougues: listaAcougues, acougue: telaAcougue, categorias, categoria, busca,
   carrinho: telaCarrinho, pedido: telaPedido, pedidos: telaPedidos, assinatura: telaAssinatura, conta,
-  ajuda: telaAjuda, sobre: telaSobre,
+  ajuda: telaAjuda, sobre: telaSobre, churrasco: telaChurrasco,
 };
 
 // ---------- Ações ----------
@@ -948,9 +1078,10 @@ async function finalizar(botao) {
 async function assinar() {
   const a = await api.criarAssinatura({
     cliente_id: cliente.id, cliente_nome: cliente.nome, endereco: cliente.endereco,
-    plano_id: escolha.plano, frequencia: escolha.freq, dia_semana: escolha.dia, acougue_id: escolha.acougue,
-    proxima_entrega: proximaEntrega(escolha.dia),
+    plano_id: escolha.plano, prazo: escolha.prazo, frequencia: escolha.freq, dia_semana: escolha.dia,
+    acougue_id: escolha.acougue, proxima_entrega: proximaEntrega(escolha.dia), extras: {},
   });
+  escolha.renovarComo = escolha.prazo;
   await recarregar();
   if (!assinaturas.some((x) => x.id === a.id)) assinaturas.unshift(a);
   toast('Assinatura ativada! 🎉', 'ok');
@@ -961,7 +1092,7 @@ document.addEventListener('click', async (e) => {
   const el = e.target.closest('[data-acao]');
   if (!el) return;
   const { acao, id } = el.dataset;
-  if (!pronto && ['finalizar', 'assinar', 'pausar', 'cancelar-assin', 'zerar', 'conferir', 'avaliar', 'chat-op', 'repetir'].includes(acao)) {
+  if (!pronto && ['finalizar', 'assinar', 'renovar', 'churrasco-carrinho', 'pausar','cancelar-assin', 'zerar', 'conferir', 'avaliar', 'chat-op', 'repetir'].includes(acao)) {
     toast('Carregando… toque de novo em um instante.');
     return;
   }
@@ -1022,6 +1153,37 @@ document.addEventListener('click', async (e) => {
       return;
     case 'finalizar': return finalizar(el);
     case 'plano': escolha.plano = id; return render();
+    case 'prazo': escolha.prazo = id; return render();
+    case 'festa': {
+      const campo = el.dataset.campo;
+      festa[campo] = Math.max(0, Math.min(200, festa[campo] + Number(el.dataset.d)));
+      return render();
+    }
+    case 'festa-acougue': festa.acougue = id; return render();
+    case 'churrasco-carrinho': return churrascoNoCarrinho();
+    case 'renovar-como': escolha.renovarComo = id; return render();
+    case 'renovar': {
+      // Renovação simulada: o presente é o do prazo que terminou; o novo período pode ter outro prazo.
+      const a = minhaAssinatura();
+      if (!a) { await recarregar(); return render(); }
+      const ganhou = prazo(a.prazo).brinde;
+      const novo = prazo(escolha.renovarComo || a.prazo);
+      el.disabled = true;
+      try {
+        await api.atualizarAssinatura(a.id, {
+          prazo: novo.id,
+          extras: {
+            ...(a.extras || {}),
+            periodo_inicio: new Date(agora()).toISOString(),
+            renovacoes: (a.extras?.renovacoes || 0) + 1,
+            brinde: { nome: ganhou.nome, icone: ganhou.icone, status: 'pendente', em: new Date(agora()).toISOString() },
+          },
+        });
+      } finally { el.disabled = false; }
+      await recarregar();
+      notificar(`Renovada! Você ganhou ${ganhou.icone} ${ganhou.nome}`, 'O presente vai junto com a próxima entrega.', '#/assinatura');
+      return render();
+    }
     case 'freq': escolha.freq = id; return render();
     case 'dia': escolha.dia = Number(id); return render();
     case 'assin-acougue': escolha.acougue = id; return render();
@@ -1143,7 +1305,7 @@ async function aoMudar(msg) {
     const p = pedidos.find((x) => x.id === r.param);
     if (p) atualizarChat(p);
     else if (msg?.tipo === 'reset') location.hash = '#/';
-  } else if (['acougues', 'acougue', 'categoria', 'carrinho'].includes(r.nome)) {
+  } else if (['acougues', 'acougue', 'categoria', 'carrinho', 'churrasco'].includes(r.nome)) {
     render(); // estoque, notas e novos parceiros
   } else if (r.nome === 'busca') {
     if (mudouEstoque) document.getElementById('q')?.dispatchEvent(new Event('input'));

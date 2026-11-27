@@ -94,7 +94,61 @@ export const FREQUENCIAS = [
   { id: 'mensal', nome: 'Mensal', dias: 30 },
 ];
 
-export const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+// Prazo da assinatura (pedido da Karla, 2026-11-26): quanto mais longo, mais barato (5% a cada degrau)
+// e, ao renovar, um kit de presente que cresce com o prazo, entregue junto com a 1ª entrega do novo período.
+export const PRAZOS = [
+  { id: 'mensal', nome: 'Mensal', meses: 1, desconto: 0, brinde: { nome: 'Pão de alho + sal grosso', icone: '🧄' } },
+  { id: 'semestral', nome: 'Semestral', meses: 6, desconto: 0.05, brinde: { nome: 'Kit Fit', icone: '📦' } },
+  { id: 'anual', nome: 'Anual', meses: 12, desconto: 0.10, brinde: { nome: 'Kit Churrasco', icone: '🔥' }, destaque: true },
+];
+export const prazo = (id) => PRAZOS.find((p) => p.id === id) || PRAZOS[0]; // assinaturas antigas não têm prazo
+export const precoAssinatura = (planoId, prazoId) =>
+  Math.round(plano(planoId).preco * (1 - prazo(prazoId).desconto) * 100) / 100;
+
+// Calculadora de churrasco. Referência de mercado: ~400 g de carne por adulto e metade por criança;
+// 60% bovina, 20% linguiça, 20% frango; 1 kg de carvão por kg de carne.
+export const CHURRASCO = {
+  gAdulto: 400, gCrianca: 200,
+  itens: [
+    { b: 'picanha', parte: 0.30, kgEmb: 1.2, uso: 'carne' },
+    { b: 'fraldinha', parte: 0.30, kgEmb: 1.0, uso: 'carne' },
+    { b: 'toscana', parte: 0.20, kgEmb: 1.0, uso: 'carne' },
+    { b: 'asa', parte: 0.20, kgEmb: 1.0, uso: 'carne' },
+    { b: 'carvao', kgCarvao: 1, kgEmb: 5, uso: 'carvao' },               // saco de 5 kg
+    { b: 'sal', kgPorKgCarne: 0.05, kgEmb: 1, uso: 'sal' },               // ~50 g por kg de carne
+    { b: 'paodealho', unPessoa: 1, unEmb: 5, uso: 'pessoa' },             // pacote com 5
+    { b: 'farofa', gPessoa: 50, gEmb: 500, uso: 'farofa' },               // pacote de 500 g
+  ],
+};
+
+export function calcularChurrasco(adultos, criancas, acougueId) {
+  const pessoas = adultos + criancas;
+  const kgCarne = (adultos * CHURRASCO.gAdulto + criancas * CHURRASCO.gCrianca) / 1000;
+  const linhas = CHURRASCO.itens.map((it) => {
+    const p = PRODUTOS.find((x) => x.acougue === acougueId && x.id === `${acougueId}-${it.b}`);
+    let precisa; let emb; let texto;
+    if (it.uso === 'carne') { precisa = kgCarne * it.parte; emb = Math.round(precisa / it.kgEmb); texto = `${kgBR(precisa)}`; }
+    else if (it.uso === 'carvao') { precisa = kgCarne * it.kgCarvao; emb = Math.ceil(precisa / it.kgEmb); texto = `${kgBR(precisa)}`; }
+    else if (it.uso === 'sal') { precisa = kgCarne * it.kgPorKgCarne; emb = Math.ceil(precisa / it.kgEmb); texto = `${Math.round(precisa * 1000)} g`; }
+    else if (it.uso === 'pessoa') { precisa = pessoas * it.unPessoa; emb = Math.ceil(precisa / it.unEmb); texto = `${precisa} un.`; }
+    else { precisa = pessoas * it.gPessoa; emb = Math.ceil(precisa / it.gEmb); texto = `${precisa} g`; }
+    if (it.uso !== 'carne') emb = pessoas ? Math.max(1, emb) : 0;
+    return { produto: p, precisa: texto, emb, kgEmb: it.kgEmb, carne: it.uso === 'carne' };
+  });
+  // As carnes vêm em peças: arredonda cada corte e, se faltar, completa a peça do corte mais em falta.
+  const carnes = linhas.filter((l) => l.carne);
+  const kgComprado = () => carnes.reduce((s, l) => s + l.emb * l.kgEmb, 0);
+  while (pessoas && kgComprado() < kgCarne * 0.95) {
+    const falta = (l) => kgCarne * CHURRASCO.itens.find((i) => l.produto.id.endsWith(`-${i.b}`)).parte - l.emb * l.kgEmb;
+    carnes.reduce((a, b) => (falta(b) > falta(a) ? b : a)).emb += 1;
+  }
+  const visiveis = linhas.filter((l) => l.emb > 0);
+  visiveis.forEach((l) => { l.subtotal = Math.round(l.emb * l.produto.preco * 100) / 100; });
+  return { pessoas, kgCarne, linhas: visiveis, total: Math.round(visiveis.reduce((s, l) => s + l.subtotal, 0) * 100) / 100 };
+}
+const kgBR = (kg) => `${kg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg`;
+
+export const DIAS_SEMANA =['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 export const STATUS = {
   recebido: { nome: 'Pedido recebido', curto: 'Novo', icone: '🧾' },
